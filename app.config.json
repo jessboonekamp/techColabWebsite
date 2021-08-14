@@ -1,0 +1,14 @@
+{
+    "port": 3001,
+    "database": {
+        "host": "localhost",
+        "user": "root",
+        "password": null,
+        "database": "tech_colab_db"
+    },
+    "adminUser": {
+        "userName": null,
+        "password": null,
+        "role": "admin"
+    }
+}
