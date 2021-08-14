@@ -3,7 +3,7 @@
     "database": {
         "host": "localhost",
         "user": "root",
-        "password": null,
+        "password": "Xptsaffp1",
         "database": "tech_colab_db"
     },
     "adminUser": {
