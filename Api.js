@@ -41,8 +41,6 @@ dbPoolConnection.connect(err => {
 
 // Api code goes here
 app.get('/', async (req, res, next) => {
-    // console.log(await bcrypt.hash("admin", await bcrypt.genSalt(10)) );
-    // console.log(await bcrypt.compare("admin", "$2b$10$i.ZyPERvG7H72hLLUMjdzu7cPRul9uJXI68CRi2binY46algiUf8i"))
     let resObj, statCode, pageName = 'Home';
 
     try {
@@ -190,7 +188,7 @@ app.get('/admin', async (req, res, next) => {
 })
 
 
-app.all("/admin/addStudent", async (req, res, next) => {
+app.all("/admin/AddStudent", async (req, res, next) => {
 
     let statCode, resObj = { AppName: appName }, content;
 
@@ -217,7 +215,6 @@ app.all("/admin/addStudent", async (req, res, next) => {
                         dbPoolConnection.query(`SELECT * FROM student WHERE first_name = '${firstName}' and last_name = '${lastName}'`, function(err, result){
 
                             if (err) return reject(err);
-
                             return resolve(result)
 
                         });
@@ -229,6 +226,7 @@ app.all("/admin/addStudent", async (req, res, next) => {
                     let createStudent = async () => {
                         return await new Promise((resolve, reject) => {
                             let sqlQuery = `INSERT into student ( first_name, last_name, biography) VALUES ('${firstName}', '${lastName}', '${biography}')`;
+                            console.log('inserting')
                             dbPoolConnection.query(sqlQuery, function(err, result){
 
                                 if (err) return reject(err);
@@ -238,11 +236,9 @@ app.all("/admin/addStudent", async (req, res, next) => {
                             });
                         })
                     }
-
-                    if(!await getStudent(firstName, lastName)){
-
+                    if(!(await getStudent(firstName, lastName)).length){
+                        console.log('Creating Student')
                         await createStudent();
-
                         return await getStudent(firstName, lastName)
 
                     }
@@ -250,11 +246,10 @@ app.all("/admin/addStudent", async (req, res, next) => {
                 
                 }
                 
+                await newStudent(firstName, lastName, biography);
 
-                // return res.send(await newStudent(firstName, lastName, biography))
 
-
-                content = 'Student';
+                content = 'Students';
 
             break;
     
@@ -277,6 +272,57 @@ app.all("/admin/addStudent", async (req, res, next) => {
     
     
 } )
+
+
+app.all("/admin/addProject", async(req, res, next) => {
+    // Define function parameters
+    let statCode, resObj = { AppName: appName }, content;
+
+    // Define swtich-case to cover request methods, GET, POST
+    switch (req.method) {
+        case "POST":
+            // Get the body of the request(EXPRESS)
+            let body = req.body
+            // Check if the body exists/Otherwise throw a bad payload error
+            if(!body){
+                statCode = 400
+                throw new Error(`Bad Request. No payload specified`)
+            }
+            // Define each attribute of the body.
+            let {title, project_date, project_type, biography} = body
+            // Define the new project function, which should contain a seperate create function.
+            async function newProject(title, project_date, project_type, biography) {
+                let createProject = async () => {
+                    return await new Promise((resolve, reject) => {
+                        let sql = `INSERT into project (title, project_date, project_type, biography) VALUES ('${title}', '${project_date}', '${project_type}', '${biography}')`
+                        dbPoolConnection.query(sql, function (err, result){
+                            if(err) return reject(err);
+                            return resolve(result);
+                        })
+                    })
+                }
+
+                await createProject()
+
+            }
+
+            await newProject(title, project_date, project_type, biography);
+            content = "Projects"
+
+
+        break;
+        
+        case "GET":
+            content = "AddProject"
+        break;
+
+        default:
+            throw new Error(`Request Method '${req.method}' is not allowed`)
+    }
+
+    resObj.Content = content;
+    res.status(statCode || 200).render('Admin', resObj)
+})
 
 
 app.all("/admin/students", async(res, req, next) => {

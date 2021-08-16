@@ -12,8 +12,12 @@
         <%- include('partials/Admin/Admin.ejs'); %>
     <% }else if(Content == "AddStudent"){ %>
         <%- include('partials/Admin/AddStudent.ejs'); %>
-    <% }else if(Content == "Student"){ %>
+    <% }else if(Content == "Students"){ %>
         <%- include('partials/Admin/Students.ejs'); %>
+    <% }else if(Content == "AddProject"){ %>
+        <%- include('partials/Admin/AddProject.ejs'); %>
+    <% }else if(Content == "Projects"){ %>
+        <%- include('partials/Admin/Projects.ejs'); %>
     <% }else{ %>
         <%- include('partials/Error.ejs'); %>
     <% } %>
