@@ -1,0 +1,15 @@
+Tables:
+USERS
+PROJECTS
+STUDENTS
+-->Bridging table
+
+Effectively showcase projects the students have done. 
+Admin uploads projects, which have links to the students. Admin adds new students.
+Both Students and projects have media upload. 
+We want student bio page.
+Project page. TechColab info page/Section. .
+
+
+
+

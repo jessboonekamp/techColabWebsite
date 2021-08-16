@@ -1,0 +1,16 @@
+<div>
+    <form method="POST">
+        <div>
+            <label for="Username">Username:</label>
+            <input type="text" name="username" id="">
+        <div>
+        <div>
+            <label for="Password">Password:</label>
+            <input type="text" name="password" id="">
+        </div>
+        <% if(FormError){ %>
+            <div><%= FormError %></div>
+        <% } %>
+        <input type="submit">
+    </form>
+</div>
