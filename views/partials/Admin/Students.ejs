@@ -1,1 +1,6 @@
-<h1>Student Page</h1>
+<h1 class="display-5">Student Page</h1>
+<% for(var i = 0; i < Students.length; i++){%>
+    <div>
+        <p><%= Students[i].first_name %></p>
+    </div>
+<% } %>

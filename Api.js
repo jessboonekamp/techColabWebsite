@@ -1,17 +1,34 @@
 const express = require('express');
+const session = require('express-session');
 const mysql = require('mysql');
 const formUploader = require('express-fileupload');
 const bcrypt = require('bcrypt');
+const path = require('path');
+const fs = require('fs').promises;
 
 const app = express();
+app.set('trust proxy', 1)
+app.use(
+    session({
+        secret: 'keyboard cat',
+        saveUninitialized: true,
+        resave: true,
+        cookie: {
+            secure: false
+        }
+    })
+)
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(formUploader());
+app.use(express.static(__dirname + '/public/'))
+// app.use('/js', express.static(path.join(__dirname, 'node_modules/bootstrap/dist/js')))
+
 
 
 const webAppConfig = require('./app.config.json');
-const { Router } = require('express');
-const res = require('express/lib/response');
+const { KeyObject } = require('crypto');
 let { port, database, adminUser, appName } = webAppConfig;
 
 app.set('views', './views');
@@ -25,7 +42,6 @@ async function decryptString(string){
     return await bcrypt.compare(string, adminUser.password)
 }
 
-
 // Connect to db
 const dbPoolConnection = mysql.createConnection(database);
 
@@ -37,10 +53,28 @@ dbPoolConnection.connect(err => {
 
 });
 
+async function getStudents(){
+    return await new Promise((resolve, reject) => {
+        let sqlQuery = `SELECT * FROM student ORDER BY id DESC`
+        dbPoolConnection.query(sqlQuery, function(err, result){
+            if(err) throw new Error(err)
+            return resolve(result)
+        })
+    });
+}
+
 // Middleware goes here
+async function isAuthorized(req, res, next) {
+
+    if(!req.session.username) return res.redirect('/adminLogin');
+
+    next()
+
+}
 
 // Api code goes here
 app.get('/', async (req, res, next) => {
+
     let resObj, statCode, pageName = 'Home';
 
     try {
@@ -52,9 +86,6 @@ app.get('/', async (req, res, next) => {
         // Code here
         resObj = {
             Content: 'Home',
-            User: {
-                name: 'Jess'
-            }
         }
     
     } catch (e) {
@@ -110,7 +141,7 @@ app.all('/adminLogin', async (req, res, next) => {
         AppName: appName,
         FormError: null,
         Content: null
-    }, content;
+    }, content, resMethod = 'redirect', resArgs = [];
 
     // All FormData gets bound to the Req.Body
     try {
@@ -140,8 +171,14 @@ app.all('/adminLogin', async (req, res, next) => {
                     statCode = 401;
                     throw new Error(defaultMsg)
                 }
+
+                
+                req.session.username = username;
+                req.session.created = new Date();
+                // resMethod = 'redirect'
+                resArgs.push('/admin')
                 // Set page to Admin
-                content = 'Admin';
+                // content = 'Admin';
     
             break;
     
@@ -156,24 +193,23 @@ app.all('/adminLogin', async (req, res, next) => {
         
         if(!statCode) statCode = 500;
 
-        content = 'Login';
+        // content = 'Login';
 
+        resArgs.push('/adminLogin')
         resObj.FormError = e.message
 
     }
 
     resObj.Content = content;
 
-    // Poor url changing on login. 
-    if(statCode !== 200)
-        return res.status(statCode || 200).render('Home', resObj);
-    
-    res.status(statCode).render('Home', resObj)
+    // // Poor url changing on login. 
+    // if(statCode !== 200)
+    //     return res.status(statCode || 200).render('Home', resObj);
+    res.status(statCode || 200)[resMethod](...resArgs)
     
 });
 
-
-app.get('/admin', async (req, res, next) => {
+app.get('/admin', isAuthorized, async (req, res, next) => {
     let statCode, resObj = { AppName: appName }, content;
     try {
         resObj.Content = "Admin"
@@ -185,28 +221,62 @@ app.get('/admin', async (req, res, next) => {
     res.status(statCode || 200).render('Admin', resObj)
 
 
-})
+});
 
+app.all("/admin/AddStudent", isAuthorized, async (req, res, next) => {
 
-app.all("/admin/AddStudent", async (req, res, next) => {
-
-    let statCode, resObj = { AppName: appName }, content;
+    let statCode, resObj = { AppName: appName }, content, resMethod = 'render', resArgs = [];
 
     try {
         
         switch(req.method){
     
             case 'GET':
-                content = "AddStudent"
+
+                resObj.Content = "AddStudent";
+
+                resArgs.push('Admin', resObj)
+
             break;
 
             case 'POST':
+
+                let fileStr = [];
+                console.log(req?.files)
+                if(req.files?.Files){
+                    if(typeof req.files.Files === 'object' && req.files.length){
+                        let files = req.files.Files;
+                        fileStr = await Promise.all(files.map(async file => {
+                            try{
+
+                                let fileAsBuffer = new Buffer.from(file.data, file.encoding);
+                                let fileName = file.name;
+                                await fs.writeFile(path.join(__dirname, 'files', fileName), fileAsBuffer);
+                                resolve(fileName)
+
+                            } catch (e) {
+                                reject(e)
+                            }
+                        }))
+            
+                    } else{
+                        console.log('Handling single file...');
+                        
+                        let file = req.files.Files;
+                        let fileAsBuffer = new Buffer.from(file.data, file.encoding);
+                        let fileName = file.name;
+                        await fs.writeFile(path.join(__dirname, 'files', fileName), fileAsBuffer)
+                        fileStr.push(fileName)
+                    }
+                }
+
                 let defaultMsg = `Student already exists.`;
                 let body = req.body;
                 if(!body){
                     statCode = 400;
                     throw new Error(`Bad request. No payload specified`);
                 }
+
                 let {firstName, lastName, biography} = body
                 // Insert First_name, last_name validation
 
@@ -248,8 +318,10 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 
                 await newStudent(firstName, lastName, biography);
 
-
-                content = 'Students';
+                // resObj.Students = await getStudents();
+                // content = 'Students';
+                resMethod = 'redirect';
+                resArgs.push('/admin/students')
 
             break;
     
@@ -262,19 +334,19 @@ app.all("/admin/AddStudent", async (req, res, next) => {
 
     } catch (e) {
         
+        console.log(e)
+
         if(!statCode) statCode = 500;
 
         content = 'Error';
 
     }
-    resObj.Content = content;
-    res.status(statCode || 200).render('Admin', resObj)
-    
-    
-} )
 
+    res.status(statCode || 200)[resMethod](...resArgs)
+    
+});
 
-app.all("/admin/addProject", async(req, res, next) => {
+app.all("/admin/addProject", isAuthorized, async(req, res, next) => {
     // Define function parameters
     let statCode, resObj = { AppName: appName }, content;
 
@@ -322,30 +394,74 @@ app.all("/admin/addProject", async(req, res, next) => {
 
     resObj.Content = content;
     res.status(statCode || 200).render('Admin', resObj)
-})
+});
 
+// Ensure ordering of Request -- Response -- Next
+app.all("/admin/students", isAuthorized, async(req, res, next) => {
+    let statCode, resObj = {Appname : appName}, content, students;
+    switch (req.method) {
+        case "GET":
+            content = "Students"
+            // Get all Students. Possible add a year to each student, so we can get all students but from specific years and not pull the entire table.
+            // let currentYear = new Date().getFullYear()
+            
+            students = await getStudents();
+            resObj.Students = students
+            break;
+    
+        default:
+            statCode = 405;
+            throw new Error(`${req.method} is not allowed`)
+    }
+    resObj.Content = content
+    res.status(statCode || 200).render("Admin", resObj);
+});
 
-app.all("/admin/students", async(res, req, next) => {
-    let statCode, resObj = { AppName: appName }, content;
+app.post('/DocumentUpload', async function(req, res, next) {
+
+    let statCode, resObj = { Message: null };
     try {
-        switch (req.method) {
-            case "GET":
-                content = "Students"
-                break;
-        
-            default:
-                statCode = 405;
-                throw new Error(`Method ${req.method} not allowed`)
+
+        let fileStr = [];
+        if(req.files?.Files){
+            if(typeof req.files.Files === 'object' && req.files.Files.length){
+                let files = req.files.Files;
+                fileStr = await Promise.all(files.map(async file => {
+                    try{
+
+                        let fileAsBuffer = new Buffer.from(file.data, file.encoding);
+                        let fileName = file.name;
+                        await fs.writeFile(`${uploadDir}\\${fileName}`, fileAsBuffer);
+                        resolve(fileName)
+
+                    } catch (e) {
+                        reject(e)
+                    }
+                }))
+    
+            } else{
+                console.log('Handling single file...');
+                let file = req.files.Files;
+                let fileAsBuffer = new Buffer.from(file.data, file.encoding);
+                let fileName = file.name;
+                await fs.writeFile(`${uploadDir}\\${fileName}`, fileAsBuffer)
+                fileStr.push(fileName)
+            }
         }
+
+        if(fileStr.length) resObj.Message = fileStr.join(`,\r\n`);
+
     } catch (e) {
-        if(!statCode) statCode = 500;
-        content = "Error"
+
+        if(!statCode)  statCode = 500;
+
+        apiResMsg = e.message;
+
     }
 
-    resObj.Content = content;
-    res.status(statCode || 200).render("Admin", resObj)
-    
-})
+    res.status(statCode || 200).send(resObj)
+
+});
 
 
 

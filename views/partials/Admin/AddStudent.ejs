@@ -2,7 +2,7 @@
     <h1>Add a student</h1>
 </div>
 
-<div>
+<div class="addStudentForm">
     <form method="POST">
         <div>
             <label for="studentFirstName">First Name</label>
@@ -16,8 +16,8 @@
             <label for="biography">Biography</label>
             <!-- <input type="text" name="biography" id=""> -->
             <textarea name="biography" id="" cols="30" rows="10"></textarea>
-            
         </div>
+        <%- include('../FileUpload') %>
         <input type="submit" name="submit" id="">
     </form>
 </div>

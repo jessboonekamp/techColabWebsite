@@ -1,8 +1,8 @@
 <div>
-    <h1>Add a project</h1>
+    <h1 class="display-4">Add a project</h1>
 </div>
 
-<div>
+<div class="addProjectForm">
     <form method="POST">
         <div>
             <label for="title">Project Title</label>
@@ -23,8 +23,8 @@
             <label for="biography">Biography</label>
             <!-- <input type="text" name="biography" id=""> -->
             <textarea name="biography" id="" cols="30" rows="10"></textarea>
-            
         </div>
+        <%- include('../FileUpload') %>
         <input type="submit" name="submit" id="">
     </form>
 </div>
