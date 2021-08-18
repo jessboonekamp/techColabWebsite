@@ -1,6 +1,26 @@
 <h1 class="display-5">Student Page</h1>
 <% for(var i = 0; i < Students.length; i++){%>
-    <div>
-        <p><%= Students[i].first_name %></p>
-    </div>
+    <% let s = Students[i] %>
+    <div class="card" style="width: 100%">
+        <div class="card-body">
+            <div>
+                <img src="<%= s.path %>" alt="">
+            </div>
+            <div>
+                <h5 class="card-title"><%= s.first_name %></h5>
+                <h6 class="card-subtitle mb-2 text-muted"></h6>
+                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                <div>
+                    <a href="#" class="card-link custom-btn">
+                        <img src="/public/images/icons/pencil.svg" alt="" class="btn-img">
+                        <span>Edit</span>
+                    </a>
+                    <a href="#" class="card-link custom-btn bin" data-type="student" data-id="<%= s.id %>">
+                        <img src="/public/images/icons/bin.svg" alt="" class="btn-img">
+                        <span>Delete</span>
+                    </a>
+                </div>
+            </div>
+            </div>
+        </div>
 <% } %>

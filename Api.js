@@ -5,9 +5,10 @@ const formUploader = require('express-fileupload');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs').promises;
-
+const bootstrapDir = '/node_modules/bootstrap/dist/';
 const app = express();
-app.set('trust proxy', 1)
+app.use(formUploader());
+app.set('trust proxy', 1);
 app.use(
     session({
         secret: 'keyboard cat',
@@ -17,30 +18,27 @@ app.use(
             secure: false
         }
     })
-)
+);
 
+app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/student_media', express.static(path.join(__dirname, 'files/student_media')));
+app.use('/project_media', express.static(path.join(__dirname, 'files/project_media')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(formUploader());
-app.use(express.static(__dirname + '/public/'))
-// app.use('/js', express.static(path.join(__dirname, 'node_modules/bootstrap/dist/js')))
 
 
+// Load Bootstrap
+// You'll be able to access these in the ejs via their named locations; 
+//  -src="bs_scripts/file_name"
+//  -src="bs_styles/file_name"
+app.use('/bs_scripts', express.static(__dirname + bootstrapDir + 'js'));
+app.use('/bs_styles', express.static(__dirname + bootstrapDir + 'css'));
 
 const webAppConfig = require('./app.config.json');
-const { KeyObject } = require('crypto');
 let { port, database, adminUser, appName } = webAppConfig;
 
 app.set('views', './views');
 app.set('view engine', 'ejs');
-
-async function encryptString(string){
-    return await bcrypt.hash(string, await bcrypt.genSalt(10))   
-}
-
-async function decryptString(string){
-    return await bcrypt.compare(string, adminUser.password)
-}
 
 // Connect to db
 const dbPoolConnection = mysql.createConnection(database);
@@ -53,24 +51,12 @@ dbPoolConnection.connect(err => {
 
 });
 
-async function getStudents(){
-    return await new Promise((resolve, reject) => {
-        let sqlQuery = `SELECT * FROM student ORDER BY id DESC`
-        dbPoolConnection.query(sqlQuery, function(err, result){
-            if(err) throw new Error(err)
-            return resolve(result)
-        })
-    });
-}
+const AppClass = require('./components/App.Class')(dbPoolConnection);
+const AppFn = require('./components/App.Fn')(dbPoolConnection);
+const ApiMiddleware = require('./components/Api.Middleware');
 
 // Middleware goes here
-async function isAuthorized(req, res, next) {
 
-    if(!req.session.username) return res.redirect('/adminLogin');
-
-    next()
-
-}
 
 // Api code goes here
 app.get('/', async (req, res, next) => {
@@ -78,14 +64,10 @@ app.get('/', async (req, res, next) => {
     let resObj, statCode, pageName = 'Home';
 
     try {
-        dbPoolConnection.query(`SELECT id, title FROM project`, (error, results, fields) => {
-
-            //console.log(error, results, fields)
-        })
 
         // Code here
         resObj = {
-            Content: 'Home',
+            Content: 'Home'
         }
     
     } catch (e) {
@@ -145,16 +127,16 @@ app.all('/adminLogin', async (req, res, next) => {
 
     // All FormData gets bound to the Req.Body
     try {
-        
+
         switch(req.method){
-    
+
             case 'POST':
 
-                let defaultMsg = `Invalid username or password.`;
+                let defaultMsg = 'Invalid username or password.';
                 let body = req.body;
                 if(!body){
                     statCode = 400;
-                    throw new Error(`Bad request. No payload specified.`)
+                    throw new Error('Bad request. No payload specified.')
                 }
 
 
@@ -167,30 +149,30 @@ app.all('/adminLogin', async (req, res, next) => {
                     throw new Error(defaultMsg)
                 }
                 // Validate password;
-                if(!password || !await decryptString(password)){
+                if(!password || !await AppFn.decryptString(password, adminUser.password)){
                     statCode = 401;
                     throw new Error(defaultMsg)
                 }
 
-                
+
                 req.session.username = username;
                 req.session.created = new Date();
                 // resMethod = 'redirect'
-                resArgs.push('/admin')
+                resArgs.push('/admin/students')
                 // Set page to Admin
                 // content = 'Admin';
-    
+
             break;
-    
+
             default:
                 statCode = 405;
                 throw new Error(`Method ${req.method} not allowed.`)
-    
-    
+
+
         }
 
     } catch (e) {
-        
+
         if(!statCode) statCode = 500;
 
         // content = 'Login';
@@ -204,12 +186,12 @@ app.all('/adminLogin', async (req, res, next) => {
 
     // // Poor url changing on login. 
     // if(statCode !== 200)
-    //     return res.status(statCode || 200).render('Home', resObj);
+    //     return res.status(statCode  200).render('Home', resObj);
     res.status(statCode || 200)[resMethod](...resArgs)
-    
+
 });
 
-app.get('/admin', isAuthorized, async (req, res, next) => {
+app.get('/admin', ApiMiddleware.isAuthorized, async (req, res, next) => {
     let statCode, resObj = { AppName: appName }, content;
     try {
         resObj.Content = "Admin"
@@ -223,7 +205,7 @@ app.get('/admin', isAuthorized, async (req, res, next) => {
 
 });
 
-app.all("/admin/AddStudent", isAuthorized, async (req, res, next) => {
+app.all("/admin/AddStudent", ApiMiddleware.isAuthorized, async (req, res, next) => {
 
     let statCode, resObj = { AppName: appName }, content, resMethod = 'render', resArgs = [];
 
@@ -241,34 +223,10 @@ app.all("/admin/AddStudent", isAuthorized, async (req, res, next) => {
 
             case 'POST':
 
-                let fileStr = [];
-                console.log(req?.files)
-                if(req.files?.Files){
-                    if(typeof req.files.Files === 'object' && req.files.length){
-                        let files = req.files.Files;
-                        fileStr = await Promise.all(files.map(async file => {
-                            try{
+                // Check and upload files if applicable
+                let uploadedFiles = await AppFn.uploadFiles(req);
 
-                                let fileAsBuffer = new Buffer.from(file.data, file.encoding);
-                                let fileName = file.name;
-                                await fs.writeFile(path.join(__dirname, 'files', fileName), fileAsBuffer);
-                                resolve(fileName)
-
-                            } catch (e) {
-                                reject(e)
-                            }
-                        }))
-            
-                    } else{
-                        console.log('Handling single file...');
-                        
-                        let file = req.files.Files;
-                        let fileAsBuffer = new Buffer.from(file.data, file.encoding);
-                        let fileName = file.name;
-                        await fs.writeFile(path.join(__dirname, 'files', fileName), fileAsBuffer)
-                        fileStr.push(fileName)
-                    }
-                }
+                console.log(252, uploadedFiles)
 
                 let defaultMsg = `Student already exists.`;
                 let body = req.body;
@@ -278,19 +236,8 @@ app.all("/admin/AddStudent", isAuthorized, async (req, res, next) => {
                 }
 
                 let {firstName, lastName, biography} = body
+
                 // Insert First_name, last_name validation
-
-                async function getStudent(firstName, lastName){
-                    return await new Promise((resolve, reject) => {
-                        dbPoolConnection.query(`SELECT * FROM student WHERE first_name = '${firstName}' and last_name = '${lastName}'`, function(err, result){
-
-                            if (err) return reject(err);
-                            return resolve(result)
-
-                        });
-                    })
-                }
-
                 async function newStudent(firstName, lastName, biography){
 
                     let createStudent = async () => {
@@ -306,19 +253,29 @@ app.all("/admin/AddStudent", isAuthorized, async (req, res, next) => {
                             });
                         })
                     }
-                    if(!(await getStudent(firstName, lastName)).length){
+
+                    let thisStudent = await AppFn.getStudent(null, firstName, lastName);
+
+                    if(!thisStudent.length){
                         console.log('Creating Student')
-                        await createStudent();
-                        return await getStudent(firstName, lastName)
+                        await AppFn.createStudent();
+                        return await AppFn.getStudent(null, firstName, lastName)
 
                     }
 
+                    return thisStudent
                 
                 }
                 
-                await newStudent(firstName, lastName, biography);
+                let thisStudent = await AppFn.newStudent(firstName, lastName, biography);
 
-                // resObj.Students = await getStudents();
+                console.log(310, thisStudent)
+
+                if(thisStudent.length && uploadedFiles.length){
+                    await AppFn.updateDbFileStore(thisStudent[0].id, uploadedFiles, 'student')
+                }
+
+                // resObj.Students = await searchStudents();
                 // content = 'Students';
                 resMethod = 'redirect';
                 resArgs.push('/admin/students')
@@ -346,7 +303,7 @@ app.all("/admin/AddStudent", isAuthorized, async (req, res, next) => {
     
 });
 
-app.all("/admin/addProject", isAuthorized, async(req, res, next) => {
+app.all("/admin/addProject", ApiMiddleware.isAuthorized, async(req, res, next) => {
     // Define function parameters
     let statCode, resObj = { AppName: appName }, content;
 
@@ -397,7 +354,7 @@ app.all("/admin/addProject", isAuthorized, async(req, res, next) => {
 });
 
 // Ensure ordering of Request -- Response -- Next
-app.all("/admin/students", isAuthorized, async(req, res, next) => {
+app.all("/admin/students", ApiMiddleware.isAuthorized, async(req, res, next) => {
     let statCode, resObj = {Appname : appName}, content, students;
     switch (req.method) {
         case "GET":
@@ -405,8 +362,20 @@ app.all("/admin/students", isAuthorized, async(req, res, next) => {
             // Get all Students. Possible add a year to each student, so we can get all students but from specific years and not pull the entire table.
             // let currentYear = new Date().getFullYear()
             
-            students = await getStudents();
+            students = await AppFn.searchStudents();
+            students = await Promise.all(students.map(async student => {
+
+                let profilePhoto = (await AppFn.getMedia(student.id, 'student'))[0];
+
+                return {
+                    ...student,
+                    ...profilePhoto
+                }
+                
+            }))
+
             resObj.Students = students
+            
             break;
     
         default:
@@ -414,55 +383,114 @@ app.all("/admin/students", isAuthorized, async(req, res, next) => {
             throw new Error(`${req.method} is not allowed`)
     }
     resObj.Content = content
+    console.log(resObj)
     res.status(statCode || 200).render("Admin", resObj);
 });
 
-app.post('/DocumentUpload', async function(req, res, next) {
+app.all('/admin/:entityType/:objectId', async (req, res, next) => {
 
-    let statCode, resObj = { Message: null };
-    try {
-
-        let fileStr = [];
-        if(req.files?.Files){
-            if(typeof req.files.Files === 'object' && req.files.Files.length){
-                let files = req.files.Files;
-                fileStr = await Promise.all(files.map(async file => {
-                    try{
-
-                        let fileAsBuffer = new Buffer.from(file.data, file.encoding);
-                        let fileName = file.name;
-                        await fs.writeFile(`${uploadDir}\\${fileName}`, fileAsBuffer);
-                        resolve(fileName)
-
-                    } catch (e) {
-                        reject(e)
-                    }
-                }))
+    let apiResData, apiResMsg, statCode, resObj = {};
     
-            } else{
-                console.log('Handling single file...');
-                let file = req.files.Files;
-                let fileAsBuffer = new Buffer.from(file.data, file.encoding);
-                let fileName = file.name;
-                await fs.writeFile(`${uploadDir}\\${fileName}`, fileAsBuffer)
-                fileStr.push(fileName)
-            }
+    try {
+    
+        // Code here
+        let params = req.params;
+
+        const entityTypeValidator = ['student','project'];
+
+        let entityType = params.entityType?.toLowerCase();
+        if(!entityType || !entityTypeValidator.includes(entityType)){
+            statCode = 400;
+            throw new Error(`Bad request. No EntityType specified.`)
         }
 
-        if(fileStr.length) resObj.Message = fileStr.join(`,\r\n`);
+        let objectId = params.objectId;
+        if(!objectId){
+            statCode = 400;
+            throw new Error(`Bad request. No ObjectId specified.`)
+        }
 
+        switch(req.method){
+
+            case 'DELETE':
+
+                console.log('Simulating object deletion', entityType, objectId)
+
+                let getFn;
+                switch(entityType){
+
+                    case 'student':
+
+                        getFn = 'getStudent';
+
+                    break;
+
+                    case 'project':
+
+                        getFn = 'getProject';
+
+                    break;
+
+                    case 'media':
+
+                        getFn = 'getMedia';
+
+                    break;
+
+                }
+
+
+                let thisObj = await AppFn[getFn](objectId);
+                if(!thisObj.length){
+                    statCode = 404;
+                    throw new Error(`Object ${entityType} ${objectId} doesn't exist.`)
+                }
+
+                thisObj = thisObj[0];
+
+                // Delete the student
+                console.log(`Deleting ${entityType} ${thisObj.id}...`);
+
+                await AppFn.deleteObject(thisObj.id, entityType);
+
+                if(['student','project'].includes(entityType)){
+
+                    let thisObjMedia = await AppFn.getMedia(thisObj.id, entityType);
+                    if(thisObjMedia.length){
+                        await Promise.all(thisObjMedia.map(obj => AppFn.deleteObject(obj.id, 'media')))
+                    }
+                }
+                
+                statCode = 204;
+
+                break;
+
+            case 'PATCH':
+
+                console.log('Simulating object update', entityType, objectId)
+
+                break;
+
+            default:
+                statCode = 405;
+                throw new Error(`Method ${req.method} not allowed.`)
+
+        }
+    
     } catch (e) {
-
-        if(!statCode)  statCode = 500;
-
-        apiResMsg = e.message;
-
+    
+        console.log(e)
+    
+        if(!statCode) statCode = 500;
+    
+        apiResMsg = e.message
+    
     }
+    
+    // Respond to Client    
+    res.status(statCode || 200).send(resObj[apiResMsg ? 'Message' : 'Data'] = apiResMsg ? apiResMsg : apiResData)
 
-    res.status(statCode || 200).send(resObj)
-
-});
-
+})
 
 
 
@@ -470,3 +498,14 @@ app.post('/DocumentUpload', async function(req, res, next) {
 const server = app.listen(port, () => {
     console.log(`Api listening on ${port}...`)
 })
+
+
+
+async function paginatedQuery(queryString){
+
+    return `
+        SELECT * FROM (${queryString})
+    
+    `
+
+}
