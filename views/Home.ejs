@@ -11,9 +11,7 @@
     <title><%= AppName %></title>
 </head>
 <body>
-    <% if(Content === 'Login'){ %>
-        <%- include('partials/Login') %>
-    <% } else if(Content === 'Admin') { %>
+    <% if(Content === 'Admin') { %>
         <%- include('partials/Admin') %>
     <% } else { %>
         <%- include('partials/Error') %>

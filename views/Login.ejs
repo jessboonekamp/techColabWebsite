@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal </title>
+    <script src="/bs_scripts/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/bs_styles/bootstrap.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+    </style>
+    <link rel="stylesheet" href="/public/css/main.css">
+    <script src="/public/js/client.js"></script>
+</head>
+<body>
+
+                
+
+    <div class="admin-login-div">
+        <h2 class="display-4">Admin Portal</h2>
+        <form method="POST" class="admin-login-form">
+            <div class="username-input-div">
+                <label for="Username">Username:</label>
+                <input type="text" name="username" id="">
+            <div>
+            <div class="password-input-div">
+                <label for="Password">Password:</label>
+                <input type="text" name="password" id="">
+            </div>
+            <% if(FormError){ %>
+                <div><%= FormError %></div>
+            <% } %>
+            <input type="submit">
+        </form>
+    </div>
+    
+
+    
+</body>
+</html>

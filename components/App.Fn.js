@@ -1,8 +1,31 @@
+const { resolve } = require('path');
+
 module.exports = function(dbPoolConnection) {
 
     if(!dbPoolConnection) throw new Error(`Cannot initialize without a database connection.`);
 
     const bcrypt = require('bcrypt');
+    const path = require('path');
+    const fs = require('fs').promises;
+
+    // Utility Functions
+    function validateAsId(value){
+        return !isNaN(Number(value))
+    }
+
+    function validateAsEntity(string){
+        return ['student','project','media'].includes(string.toLowerCase())
+    }
+
+    function newDBQueryFilterString(object, type, operator){
+
+        let delimiter = ' AND ';
+        if(type === 'update') delimiter = ', ';
+
+        if(operator === 'like') return Object.keys(object).map(k => `${k} LIKE '%${object[k]}%'`).join(delimiter) 
+
+        return Object.keys(object).map(k => `${k} = '${object[k]}'`).join(delimiter)
+    }
 
     return {
 
@@ -12,16 +35,33 @@ module.exports = function(dbPoolConnection) {
         decryptString: async function (string, encryptedString){
             return await bcrypt.compare(string, encryptedString)
         },
-        searchStudents: async function (){
+        searchStudents: async function (query){
             return await new Promise((resolve, reject) => {
-                let sqlQuery = `SELECT * FROM student ORDER BY id DESC`
+
+
+                let sqlQuery = `SELECT * FROM student ${query ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : ''}`
+
                 dbPoolConnection.query(sqlQuery, function(err, result){
-                    if(err) throw new Error(err)
+
+                    if(err) return reject(err)
+
                     return resolve(result)
                 })
             });
         },
-        uploadFiles: async function (req, entityType) {
+        searchProjects: async function (query){
+            return await new Promise((resolve, reject) => {
+                let sqlQuery = `SELECT * FROM project ${query ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : ''}`
+                dbPoolConnection.query(sqlQuery, function(err, res) {
+
+                    if(err) return reject(err);
+
+                    return resolve(res)
+
+                })
+            }); 
+        },
+        uploadFiles: async function (req, entityType, defaultPath) {
     
             try {
                 
@@ -38,15 +78,14 @@ module.exports = function(dbPoolConnection) {
             
                                 let fileAsBuffer = new Buffer.from(file.data, file.encoding);
             
-                                let filePath = path.join(__dirname, targetSaveFolder, fileName);
+                                let filePath = path.join(defaultPath, targetSaveFolder, fileName);
             
                                 await fs.writeFile(filePath, fileAsBuffer);
         
-                                uploadFiles.push({
+                                return {
                                     name: fileName,
                                     filePath: filePath
-                                })
-            
+                                }            
             
                             } catch (e) {
                                 throw new Error(`Failed to upload file ${fileName}. Error: ${e.message}`);
@@ -58,7 +97,7 @@ module.exports = function(dbPoolConnection) {
             
                         let file = req.files.Files;
                         let fileName = file.name;
-                        let filePath = path.join(__dirname, targetSaveFolder, fileName);
+                        let filePath = path.join(defaultPath, targetSaveFolder, fileName);
                         let fileAsBuffer = new Buffer.from(file.data, file.encoding);
                         await fs.writeFile(filePath, fileAsBuffer);
                         uploadFiles.push({
@@ -69,7 +108,7 @@ module.exports = function(dbPoolConnection) {
                 }
         
                 return uploadFiles
-        
+
             } catch (e) {
                 console.log(e)
                 throw new Error(`File upload failed. Error: ${e.message}`)
@@ -81,9 +120,9 @@ module.exports = function(dbPoolConnection) {
         
             try {
         
-                if(isNaN(Number(owningObjId))) throw new Error('Invalid OwningObjectId.');
+                if(!validateAsId(owningObjId)) throw new Error('Invalid OwningObjectId.');
                 
-                console.log(uploadedFiles)
+                console.log(112, uploadedFiles)
         
                 if(!Array.isArray(uploadedFiles) || !uploadedFiles.find(f => typeof f === 'object'))
                     throw new Error(`Invalid File Array.`);
@@ -153,11 +192,25 @@ module.exports = function(dbPoolConnection) {
                 });
             })
         },
+        getProject: async function (projectId){
+
+            let sqlQuery = `SELECT * FROM project` ;
+            if(projectId) sqlQuery += `WHERE id = ${projectId}`;
+
+            return await new Promise((resolve, reject) => {
+                dbPoolConnection.query(sqlQuery, function(err, result){
+
+                    if (err) return reject(err);
+                    return resolve(result)
+
+                });
+            })
+        },
         deleteObject: async function (objectId, entityType){
             
             try {
                 
-                if(isNaN(Number(objectId))) throw new Error(`No ObjectId specified.`);
+                if(!validateAsId(objectId)) throw new Error(`No ObjectId specified.`);
 
                 const entityTypeValidator = ['media', 'student', 'project'];
 
@@ -175,6 +228,93 @@ module.exports = function(dbPoolConnection) {
 
             } catch (error) {
                 throw new Error(`AppFn.DeleteObject failed to remove ObjectId ${objectId}. Error: ${e.message}`)
+            }
+
+        },
+        createStudent: async (firstName,lastName, biography) => {
+            return await new Promise((resolve, reject) => {
+                let sqlQuery = `INSERT into student ( first_name, last_name, biography) VALUES ('${firstName}', '${lastName}', '${biography}')`;
+                console.log('inserting')
+                dbPoolConnection.query(sqlQuery, function(err, result){
+
+                    if (err) return reject(err);
+
+                    return resolve(result)
+
+                });
+            })
+        },
+        createProject: async (title, project_date, project_type, description) => {
+            return await new Promise((resolve, reject) => {
+                let sql = `
+                    INSERT into project
+                        (title, project_date, project_type, description) 
+                    VALUES 
+                        ('${title}', '${project_date}', '${project_type}', '${description}');
+
+                    SELECT LAST_INSERT_ID() AS id
+                `
+                dbPoolConnection.query(sql, function (err, result){
+                    if(err) return reject(err);
+
+                    console.log(247, result)
+
+                    return resolve(result);
+                })
+            })
+        },
+        patchStudent: async function (studentId, updateObj){
+            
+            try {
+
+                if(!validateAsId(studentId)) throw new Error(`Invalid ObjectId. Not a number.`);
+
+                return await new Promise((resolve, reject) => {
+                    dbPoolConnection.query(`UPDATE student SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${studentId}`, function (err, result){
+                        if(err) return reject(err);
+                        return resolve(result);
+                    })
+                })
+
+            } catch (e) {
+                console.log(e)
+                throw new Error(`AppFn.PatchStudent failed to patch ObjectId ${studentId}. Error: ${e.message}`)
+            }
+
+        },
+        patchProject: async function (objectId, updateObj){
+            
+            try {
+
+                if(!validateAsId(objectId)) throw new Error(`Invalid ObjectId. Not a number.`);
+
+                return await new Promise((resolve, reject) => {
+                    dbPoolConnection.query(`UPDATE project SET (${newDBQueryFilterString(updateObj, 'update')})`, function (err, result){
+                        if(err) return reject(err);
+                        return resolve(result);
+                    })
+                })
+
+            } catch (error) {
+                throw new Error(`AppFn.PatchProject failed to patch ObjectId ${objectId}. Error: ${e.message}`)
+            }
+
+        },
+        addStudentProjectLink: async function (studentId, projectId){
+
+            try {
+
+                if(!validateAsId(studentId) || !validateAsId(projectId)) throw new Error(`Invalid Student/Project Id. Not a number.`);
+
+                return await new Promise((resolve, reject) => {
+                    dbPoolConnection.query(`INSERT INTO student_project (student_id, project_id) VALUES(${studentId}, ${projectId})`, function (err, result){
+                        if(err) return reject(err);
+                        return resolve(result);
+                    })
+                })
+
+            } catch (e) {
+                
             }
 
         }

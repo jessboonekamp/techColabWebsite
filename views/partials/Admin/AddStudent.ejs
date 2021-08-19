@@ -1,22 +1,4 @@
 <div>
     <h1>Add a student</h1>
 </div>
-<div class="addStudentForm">
-    <form method="POST" enctype="multipart/form-data">
-        <div>
-            <label for="studentFirstName">First Name</label>
-            <input type="text" name="firstName" id="">
-        </div>
-        <div>
-            <label for="studentLastName">Last Name</label>
-            <input type="text" name="lastName" id="">
-        </div>
-        <div>
-            <label for="biography">Biography</label>
-            <!-- <input type="text" name="biography" id=""> -->
-            <textarea name="biography" id="" cols="30" rows="10"></textarea>
-        </div>
-        <%- include('../FileUpload') %>
-        <input type="submit" name="submit" id="">
-    </form>
-</div>
+<%- include('StudentForm') %>

@@ -5,7 +5,8 @@
         "host": "localhost",
         "user": "root",
         "password": "Xptsaffp1",
-        "database": "tech_colab_db"
+        "database": "tech_colab_db",
+        "multipleStatements": true
     },
     "adminUser": {
         "userName": "admin",

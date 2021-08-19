@@ -1,1 +1,29 @@
-<h1>Projects Page</h1>
+<h1 class="display-5">Projects</h1>
+<div class="card-container">
+    <% console.log(Projects) %>
+    <% for(var i = 0; i < Projects.length; i++){%>
+        <% let s = Projects[i] %>
+        <div class="card">
+            <div class="card-body student-card-body">
+                <div>
+                    <img class="student-image" src="<%= s.path %>" alt="">
+                </div>
+                <div class="student-card-content">
+                    <h5 class="card-title"><%= s.title %></h5>
+                    <h6 class="card-subtitle mb-2 text-muted"></h6>
+                    <p class="card-text"><%= s.description %></p>
+                    <div class="student-card-button">
+                        <!-- <a href="#" class="card-link custom-btn editProject" student="<%= JSON.stringify(s) %>">
+                            <img src="/public/images/icons/pencil.svg" alt="" class="btn-img">
+                            <span>Edit</span>
+                        </a> -->
+                        <a href="#" class="card-link custom-btn bin" data-type="project" data-id="<%= s.id %>">
+                            <img src="/public/images/icons/bin.svg" alt="" class="btn-img">
+                            <span>Delete</span>
+                        </a>
+                    </div>
+                </div>
+                </div>
+            </div>
+    <% } %>
+</div>

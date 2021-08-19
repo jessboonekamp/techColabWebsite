@@ -14,21 +14,21 @@
     <script src="/public/js/client.js"></script>
 </head>
 <body>
-    <div class="container">
+    <nav class="navbar navbar-light bg-light admin-navbar">
+        <a class="navbar-brand" href="#">
+            <img id="tech-colab-logo" src="/public/images/logo.gif" class="d-inline-block align-top" alt="">
+        </a>
+        <h1 class="display-1">Administration</h1>
+    </nav>
+    <div class="container-fluid">
         <div class="row">
-            <nav class="navbar navbar-light bg-light">
-                <a class="navbar-brand" href="#">
-                    <img id="techColabLogo" src="/public/images/logo.gif" class="d-inline-block align-top" alt="">
-                </a>
-                <h1 class="display-1">Admin Page</h1>
-            </nav>
-        </div>
-        <div class="row">
-            <div class="col"></div>
-            <div class="col-8">
+            <div class="col-1"></div>
+            <div class="col-10">
                 
                 <% if(Content == "Admin") { %>
                     <%- include('partials/Admin/Admin.ejs'); %>
+                <!-- <% }else if(Content === 'Login'){ %>
+                    <%- include('partials/Admin/Login') %> -->
                 <% }else if(Content == "AddStudent"){ %>
                     <%- include('partials/Admin/AddStudent.ejs'); %>
                 <% }else if(Content == "Students"){ %>
@@ -42,7 +42,7 @@
                 <% } %>
                 
             </div>
-            <div class="col"></div>
+            <div class="col-1"></div>
         </div>
     </div>
     

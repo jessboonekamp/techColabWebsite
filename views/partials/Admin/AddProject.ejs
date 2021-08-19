@@ -3,7 +3,7 @@
 </div>
 
 <div class="addProjectForm">
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <div>
             <label for="title">Project Title</label>
             <input type="text" name="title" id="">
@@ -20,9 +20,9 @@
             <input type="date" name="project_date" id="">
         </div>
         <div>
-            <label for="biography">Biography</label>
+            <label for="description">Biography</label>
             <!-- <input type="text" name="biography" id=""> -->
-            <textarea name="biography" id="" cols="30" rows="10"></textarea>
+            <textarea name="description" id="" cols="30" rows="10"></textarea>
         </div>
         <%- include('../FileUpload') %>
         <input type="submit" name="submit" id="">

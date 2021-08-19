@@ -1,0 +1,26 @@
+<div class="addStudentForm">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="col-50 form-part">
+            <label for="first_name">First Name</label>
+            <input type="text" name="first_name" id="">
+        </div>
+        <div class="col-50 form-part">
+            <label for="last_name">Last Name</label>
+            <input type="text" name="last_name" id="">
+        </div>
+        <div class="col-100 form-part">
+            <label for="biography">Biography</label>
+            <!-- <input type="text" name="biography" id=""> -->
+            <textarea name="biography" id="" cols="30" rows="10"></textarea>
+        </div>
+        <div class="col-100 form-part">
+            <label>Select Project(s)</label>
+            <input type="text" id="searchProjects" autocomplete="off" name="title" placeholder="Type 3 or more characters...">
+            <div class="searchResults"></div>
+        </div>
+        <%- include('../FileUpload') %>
+        <div class="col-100 d-f right">
+            <input type="submit" name="submit" id="">
+        </div>
+    </form>
+</div>

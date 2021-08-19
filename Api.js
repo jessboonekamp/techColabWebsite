@@ -113,7 +113,7 @@ app.get('/adminLogin', async (req, res, next) => {
 
     }
 
-    res.status(statCode || 200).render('Home', resObj)
+    res.status(statCode || 200).render('Login', resObj)
 
 });
 
@@ -191,12 +191,18 @@ app.all('/adminLogin', async (req, res, next) => {
 
 });
 
-app.get('/admin', ApiMiddleware.isAuthorized, async (req, res, next) => {
+app.get('/admin', async (req, res, next) => {
+
     let statCode, resObj = { AppName: appName }, content;
+
     try {
+
         resObj.Content = "Admin"
+
     } catch (e) {
+
         statCode = 404
+
     }
 
 
@@ -205,7 +211,7 @@ app.get('/admin', ApiMiddleware.isAuthorized, async (req, res, next) => {
 
 });
 
-app.all("/admin/AddStudent", ApiMiddleware.isAuthorized, async (req, res, next) => {
+app.all("/admin/AddStudent", async (req, res, next) => {
 
     let statCode, resObj = { AppName: appName }, content, resMethod = 'render', resArgs = [];
 
@@ -224,7 +230,7 @@ app.all("/admin/AddStudent", ApiMiddleware.isAuthorized, async (req, res, next) 
             case 'POST':
 
                 // Check and upload files if applicable
-                let uploadedFiles = await AppFn.uploadFiles(req);
+                let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
 
                 console.log(252, uploadedFiles)
 
@@ -235,30 +241,15 @@ app.all("/admin/AddStudent", ApiMiddleware.isAuthorized, async (req, res, next) 
                     throw new Error(`Bad request. No payload specified`);
                 }
 
-                let {firstName, lastName, biography} = body
+                let {first_name: firstName, last_name: lastName, biography} = body
 
                 // Insert First_name, last_name validation
                 async function newStudent(firstName, lastName, biography){
-
-                    let createStudent = async () => {
-                        return await new Promise((resolve, reject) => {
-                            let sqlQuery = `INSERT into student ( first_name, last_name, biography) VALUES ('${firstName}', '${lastName}', '${biography}')`;
-                            console.log('inserting')
-                            dbPoolConnection.query(sqlQuery, function(err, result){
-
-                                if (err) return reject(err);
-
-                                return resolve(result)
-
-                            });
-                        })
-                    }
-
                     let thisStudent = await AppFn.getStudent(null, firstName, lastName);
 
                     if(!thisStudent.length){
                         console.log('Creating Student')
-                        await AppFn.createStudent();
+                        await AppFn.createStudent(firstName,lastName, biography);
                         return await AppFn.getStudent(null, firstName, lastName)
 
                     }
@@ -267,7 +258,7 @@ app.all("/admin/AddStudent", ApiMiddleware.isAuthorized, async (req, res, next) 
                 
                 }
                 
-                let thisStudent = await AppFn.newStudent(firstName, lastName, biography);
+                let thisStudent = await newStudent(firstName, lastName, biography);
 
                 console.log(310, thisStudent)
 
@@ -303,13 +294,15 @@ app.all("/admin/AddStudent", ApiMiddleware.isAuthorized, async (req, res, next) 
     
 });
 
-app.all("/admin/addProject", ApiMiddleware.isAuthorized, async(req, res, next) => {
+app.all("/admin/addProject", async(req, res, next) => {
     // Define function parameters
     let statCode, resObj = { AppName: appName }, content;
 
     // Define swtich-case to cover request methods, GET, POST
     switch (req.method) {
+
         case "POST":
+
             // Get the body of the request(EXPRESS)
             let body = req.body
             // Check if the body exists/Otherwise throw a bad payload error
@@ -318,29 +311,24 @@ app.all("/admin/addProject", ApiMiddleware.isAuthorized, async(req, res, next) =
                 throw new Error(`Bad Request. No payload specified`)
             }
             // Define each attribute of the body.
-            let {title, project_date, project_type, biography} = body
+            let { title, project_date, project_type, description } = body;
+
             // Define the new project function, which should contain a seperate create function.
-            async function newProject(title, project_date, project_type, biography) {
-                let createProject = async () => {
-                    return await new Promise((resolve, reject) => {
-                        let sql = `INSERT into project (title, project_date, project_type, biography) VALUES ('${title}', '${project_date}', '${project_type}', '${biography}')`
-                        dbPoolConnection.query(sql, function (err, result){
-                            if(err) return reject(err);
-                            return resolve(result);
-                        })
-                    })
-                }
-
-                await createProject()
-
+            async function newProject(title, project_date, project_type, description) {
+                // Perform any project data validation
+                return (await AppFn.createProject(title, project_date, project_type, description))[1][0].id
             }
+            
+            let projectId = await newProject(title, project_date, project_type, description);
 
-            await newProject(title, project_date, project_type, biography);
+            let uploadedFiles = await AppFn.uploadFiles(req, 'project', __dirname);
+
+            if(uploadedFiles.length) await AppFn.updateDbFileStore(projectId, uploadedFiles, 'project');
+
             content = "Projects"
 
-
         break;
-        
+
         case "GET":
             content = "AddProject"
         break;
@@ -353,11 +341,77 @@ app.all("/admin/addProject", ApiMiddleware.isAuthorized, async(req, res, next) =
     res.status(statCode || 200).render('Admin', resObj)
 });
 
+app.get("/admin/:entityType/search?", async (req, res, next) => {
+
+    let statCode, apiResMsg, apiResData;
+
+    try {
+        
+        let entityType = req.params.entityType;
+        if(!entityType || !['student','project','media'].includes(entityType.toLowerCase())){
+            statCode = 400;
+            throw new Error(`Bad request. Invalid EntityType specified.`)
+        }
+
+        let query = req.query;
+        let queryKeys = Object.keys(query);
+        if(!queryKeys.length){
+            statCode = 400;
+            throw new Error(`Bad request. No query parameters specified..`)
+        }
+
+        let appFn, searchProps;
+        switch(entityType){
+
+            case 'project':
+
+                appFn = 'searchProjects';
+                searchProps = ['title']
+
+            break;
+
+            case 'student':
+
+                appFn = 'searchStudents';
+                searchProps = ['first_name', 'last_name']
+
+            break
+
+        }
+
+        if(queryKeys.find(k => !searchProps.includes(k))){
+            statCode = 400;
+            throw new Error(`Bad request. One or more of: ${queryKeys.join(', ')} doesn't exist on EntityType ${entityType}.`)
+        }
+        
+        apiResData = await AppFn[appFn](query)
+
+
+    } catch (e) {
+        
+        console.log(e)
+
+        if(!statCode) statCode = 500;
+
+        apiResMsg = e.message
+
+    }
+
+    res.status(statCode || 200).send({
+        [apiResMsg ? 'Message' : 'Data']: apiResMsg || apiResData
+    })
+
+})
+
 // Ensure ordering of Request -- Response -- Next
-app.all("/admin/students", ApiMiddleware.isAuthorized, async(req, res, next) => {
-    let statCode, resObj = {Appname : appName}, content, students;
+app.all("/admin/students/:studentId*?", async(req, res, next) => {
+
+    let statCode, resObj = {Appname : appName}, content, students, resMethod
+
     switch (req.method) {
+
         case "GET":
+
             content = "Students"
             // Get all Students. Possible add a year to each student, so we can get all students but from specific years and not pull the entire table.
             // let currentYear = new Date().getFullYear()
@@ -365,27 +419,98 @@ app.all("/admin/students", ApiMiddleware.isAuthorized, async(req, res, next) => 
             students = await AppFn.searchStudents();
             students = await Promise.all(students.map(async student => {
 
-                let profilePhoto = (await AppFn.getMedia(student.id, 'student'))[0];
+                let id = student.id;
 
-                return {
+                let profilePhoto = (await AppFn.getMedia(id, 'student'))[0];
+
+                let o = {
                     ...student,
                     ...profilePhoto
                 }
+
+                o.id = id;
+
+                return o
+
                 
             }))
 
             resObj.Students = students
             
             break;
-    
+
+        case "PATCH":
+
+            let updateObj = req.body;
+
+            console.log(req.params)
+
+            let studentId = req.params.studentId;
+            if(!studentId || isNaN(Number(studentId))){
+                statCode = 400;
+                throw new Error(`Bad request. Invalid StudentId, not a number.`)
+            }
+
+            let thisStudent = await AppFn.getStudent(studentId);
+            if(!thisStudent){
+                statCode = 404;
+                throw new Error(`Student not found.`)
+            }
+
+            await AppFn.patchStudent(studentId, updateObj);
+
+            return res.send({
+                Message: 'Student updated!'
+            })
+            
+
+            break;
+
         default:
             statCode = 405;
             throw new Error(`${req.method} is not allowed`)
     }
+
     resObj.Content = content
     console.log(resObj)
+
     res.status(statCode || 200).render("Admin", resObj);
 });
+
+app.all("/admin/projects", async(req,res, next) => {
+    let statCode, resObj = {Appname: appName}, content;
+    switch (req.method) {
+
+        case "GET":
+
+            content = "Projects"
+
+            // Then map each project in array with its media.
+            resObj.Projects = await Promise.all((await AppFn.searchProjects()).map(async project => {
+
+                let id = project.id;
+
+                project.media = await AppFn.getMedia(id, 'project');
+  
+                project.id = id;
+
+                return project
+
+
+            }))
+
+            break;
+
+        default:
+            statCode = 405;
+            throw new Error(`'${req.method}' is not allowed`)
+    }
+
+
+    resObj.Content = content;
+
+    res.status(statCode || 200).render("Admin", resObj);
+})
 
 app.all('/admin/:entityType/:objectId', async (req, res, next) => {
 
