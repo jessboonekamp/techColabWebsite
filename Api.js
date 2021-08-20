@@ -232,7 +232,7 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 // Check and upload files if applicable
                 let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
 
-                console.log(252, uploadedFiles)
+                console.log(252, req.body)
 
                 let defaultMsg = `Student already exists.`;
                 let body = req.body;
@@ -260,10 +260,14 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 
                 let thisStudent = await newStudent(firstName, lastName, biography);
 
-                console.log(310, thisStudent)
-
                 if(thisStudent.length && uploadedFiles.length){
                     await AppFn.updateDbFileStore(thisStudent[0].id, uploadedFiles, 'student')
+                }
+
+                if(req.body?.ProjectIDs?.length){
+                    console.log('Binding Student to Projects...');
+                    await Promise.all(req.body.ProjectIDs.map(projId => AppFn.addStudentProjectLink(thisStudent[0].id, projId)))
+
                 }
 
                 // resObj.Students = await searchStudents();

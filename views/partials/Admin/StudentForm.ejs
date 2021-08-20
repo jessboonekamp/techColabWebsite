@@ -16,7 +16,10 @@
         <div class="col-100 form-part">
             <label>Select Project(s)</label>
             <input type="text" id="searchProjects" autocomplete="off" name="title" placeholder="Type 3 or more characters...">
-            <div class="searchResults"></div>
+            <div class="p-rel">
+                <div class="dropdown searchResults"></div>
+            </div>
+            <div class="flex-box selectedItems" id="selectedProjects"></div>
         </div>
         <%- include('../FileUpload') %>
         <div class="col-100 d-f right">
@@ -24,3 +27,4 @@
         </div>
     </form>
 </div>
+

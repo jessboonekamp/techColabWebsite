@@ -15,6 +15,9 @@ body{
     font-family: 'Poppins', sans-serif;
 }
 
+*:hover{ cursor: pointer; }
+.disabled{ cursor: not-allowed; }
+
 
 #tech-colab-logo{
     object-fit:cover;
@@ -104,6 +107,55 @@ form > div{
     box-sizing: border-box;
     padding: 6px;
 }
+
+.dropdown{
+    position: absolute;
+    background: #b2d6f5;
+    max-height: 20vh;
+    overflow: auto;
+    width: 100%;
+}
+
+.dropdown::-webkit-scrollbar{
+    width: 3px;
+    height: 3px;
+    background-color: aliceblue
+}
+.dropdown::-webkit-scrollbar-thumb{
+    background-color: rgb(15, 120, 240);
+}
+
+.result{
+    padding: 5px;
+    border-bottom: 1px solid #badfff;
+}
+.result:hover{ 
+    background: #86959c;
+    color: aliceblue;
+    border-bottom: 1px solid #3da5ff;
+}
+.flex-box{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: .25rem;
+    padding: 10px;
+}
+
+.selected-opt{
+    padding: 6px;
+    color: aliceblue;
+    background: linear-gradient(to bottom left,#216e93,#21648a,#1f5881);
+    border: 1px solid #0081ff;
+    gap: 2px;
+    box-shadow: 1px 1px 7px 0 dodgerblue;
+    border-radius: 3px;
+}
+.selected-opt img{ max-height: 22px; }
+
+.hide{ display: none; }
+.p-rel{ position: relative; }
 .d-f{ display: flex; }
 .right{ justify-content: flex-end;}
 .col-50{ width: 50%; }

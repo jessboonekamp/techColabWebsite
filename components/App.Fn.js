@@ -304,6 +304,8 @@ module.exports = function(dbPoolConnection) {
 
             try {
 
+                console.log(arguments)
+
                 if(!validateAsId(studentId) || !validateAsId(projectId)) throw new Error(`Invalid Student/Project Id. Not a number.`);
 
                 return await new Promise((resolve, reject) => {
@@ -314,7 +316,7 @@ module.exports = function(dbPoolConnection) {
                 })
 
             } catch (e) {
-                
+                console.log(e)
             }
 
         }
