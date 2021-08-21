@@ -1,4 +1,4 @@
-<h1 class="display-5">Students</h1>
+<h4 class="page-header">Students</h4>
 <div class="card-container">
     <% console.log(Students) %>
     <% for(var i = 0; i < Students.length; i++){%>
@@ -6,14 +6,18 @@
         <div class="card">
             <div class="card-body student-card-body">
                 <div>
-                    <img class="student-image" src="<%= s.path %>" alt="">
+                    <% if(s?.path) { %>
+                        <img class="student-image" src="<%= s.path %>" alt="">
+                    <% } else { %>
+                        <div class="student-image student-image-none"></div>
+                    <% } %>
                 </div>
                 <div class="student-card-content">
                     <h5 class="card-title"><%= s.first_name %></h5>
                     <h6 class="card-subtitle mb-2 text-muted"></h6>
                     <p class="card-text"><%= s.biography %></p>
                     <div class="student-card-button">
-                        <a href="#" class="card-link custom-btn editStudent" student="<%= JSON.stringify(s) %>">
+                        <a href="#" class="card-link custom-btn editStudent" data-studentid="<%= s.id %>">
                             <img src="/public/images/icons/pencil.svg" alt="" class="btn-img">
                             <span>Edit</span>
                         </a>
@@ -37,11 +41,11 @@
                 </button>
             </div>
             <div class="modal-body">
-                <%- include('StudentForm') %>
+                <%- include('StudentForm', { noSubmit: true }) %>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" id="saveStudent">Save changes</button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="closeDialog">Close</button>
             </div>
         </div>
     </div>

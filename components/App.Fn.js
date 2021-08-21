@@ -27,6 +27,85 @@ module.exports = function(dbPoolConnection) {
         return Object.keys(object).map(k => `${k} = '${object[k]}'`).join(delimiter)
     }
 
+    
+    async function newDBQuery(statement, conditionObj){
+        return await new Promise((resolve, reject) => {
+            dbPoolConnection.query(statement.concat(conditionObj ? ` WHERE ${newDBQueryFilterString(conditionObj)}` : ''), function (err, result){
+
+                if(err) return reject(err);
+
+                return resolve(result);
+
+            })
+        })
+    }
+
+    async function getStudent(studentId, firstName, lastName){
+        
+        let sqlQuery = `SELECT * FROM student WHERE `;
+        if(studentId) sqlQuery += `id = ${studentId}`;
+        if(firstName && lastName) sqlQuery += `first_name = '${firstName}' and last_name = '${lastName}'`
+        console.log(sqlQuery)
+        return await new Promise((resolve, reject) => {
+            dbPoolConnection.query(sqlQuery, function(err, result){
+    
+                if (err) return reject(err);
+                return resolve(result)
+    
+            });
+        })
+    }
+
+    async function getMedia(owningObjId, entityType){
+        
+        try {
+            
+            let results = await new Promise((resolve, reject) => {
+                let sqlQuery = `SELECT * FROM media WHERE owning_id = ${owningObjId} AND entity_type = '${entityType}'`;
+                dbPoolConnection.query(sqlQuery, function(err, result){
+                
+                    if (err) return reject(err);
+        
+                    return resolve(result)
+        
+                });
+            });
+    
+            return results.map(r => {
+                r.path = `/${entityType}_media/${r.name}`
+                return r
+            })
+    
+        } catch (e) {
+            throw new Error(`Failed to get Media for EntityType ${entityType}, OwningObjectId ${owningObjId}`)
+        }
+    
+    }
+
+    async function getStudentProject(studentId){
+
+        try {
+            
+            if(!validateAsId(studentId)) throw new Error(`Invalid StudentId. Not a number.`);
+
+            return await new Promise((resolve, reject) => {
+                dbPoolConnection.query(`
+                    SELECT Proj.*, SP.id AS link_id FROM student_project AS SP
+                        LEFT JOIN project AS Proj
+                    ON Proj.id = SP.project_id
+                        WHERE SP.student_id = ${studentId}                    
+                `, function (err, result){
+                    if(err) return reject(err);
+                    return resolve(result);
+                })
+            })
+
+        } catch (e) {
+            console.log(e)
+            throw new Error(`AppFn.GetStudentProject failed to find Projects related to StudentId ${studentId}. Error: ${e.message}`)
+        }
+    }
+
     return {
 
         encryptString: async function (string){
@@ -152,59 +231,56 @@ module.exports = function(dbPoolConnection) {
             }
         
         },    
-        getMedia: async function (owningObjId, entityType){
-        
+        getMedia: getMedia,
+        deleteMedia: async function (owningObjId, fileId){
+
             try {
                 
-                let results = await new Promise((resolve, reject) => {
-                    let sqlQuery = `SELECT * FROM media WHERE owning_id = ${owningObjId} AND entity_type = '${entityType}'`;
-                    dbPoolConnection.query(sqlQuery, function(err, result){
-                    
-                        if (err) return reject(err);
-            
-                        return resolve(result)
-            
-                    });
-                });
-        
-                return results.map(r => {
-                    r.path = `/${entityType}_media/${r.name}`
-                    return r
-                })
+                if(!validateAsId(owningObjId) || !validateAsId(fileId)) throw new Error(`Invalid ObjectId or FileId. Must be numbers.`);
+
+                return await newDBQuery(`DELETE FROM media`, { id: fileId, owning_id: owningObjId })
+
+            } catch (e) {
+                throw new Error(`Failed to delete FileId ${fileId}. Error: ${e.message}.`)      
+            }
+
+        },
+        getStudent: getStudent,
+        getStudentProfile: async function (studentId){
+
+            try {
+
+                let student = (await getStudent(studentId))[0];
+
+                let id = student.id;
+
+                let profilePhoto = (await getMedia(id, 'student'))[0];
+
+                let projects = await getStudentProject(id)
+
+                console.log(438, projects)
+
+                let o = {
+                    ...student,
+                    ...profilePhoto,
+                    projects: projects
+                }
+
+                o.id = id;
+
+                return o
         
             } catch (e) {
-                throw new Error(`Failed to get Media for EntityType ${entityType}, OwningObjectId ${owningObjId}`)
+                throw new Error(`Failed to get Student Profile for Student ${studentId}. Error: ${e.message}`)
             }
-        
-        },    
-        getStudent: async function (studentId, firstName, lastName){
-        
-            let sqlQuery = `SELECT * FROM student WHERE `;
-            if(studentId) sqlQuery += `id = ${studentId}`;
-            if(firstName && lastName) sqlQuery += `first_name = '${firstName}' and last_name = '${lastName}'`
-        
-            return await new Promise((resolve, reject) => {
-                dbPoolConnection.query(sqlQuery, function(err, result){
-        
-                    if (err) return reject(err);
-                    return resolve(result)
-        
-                });
-            })
         },
         getProject: async function (projectId){
 
             let sqlQuery = `SELECT * FROM project` ;
-            if(projectId) sqlQuery += `WHERE id = ${projectId}`;
+            let conditionObj;
+            if(projectId) conditionObj = { id: projectId };
 
-            return await new Promise((resolve, reject) => {
-                dbPoolConnection.query(sqlQuery, function(err, result){
-
-                    if (err) return reject(err);
-                    return resolve(result)
-
-                });
-            })
+            return await newDBQuery(sqlQuery, conditionObj)
         },
         deleteObject: async function (objectId, entityType){
             
@@ -216,17 +292,10 @@ module.exports = function(dbPoolConnection) {
 
                 if(!entityTypeValidator.includes(entityType)) throw new Error(`No EntityType specified.`);
 
-                return await new Promise((resolve, reject) => {
-                    dbPoolConnection.query(`DELETE FROM ${entityType} WHERE id = ${objectId}`, function(err, result){
-            
-                        if (err) return reject(err);
+                // DELETE STUDENT_PROJECT_LINKS
+                return await newDBQuery(`DELETE FROM ${entityType}`, { id: objectId })
 
-                        return resolve(result)
-            
-                    });
-                })
-
-            } catch (error) {
+            } catch (e) {
                 throw new Error(`AppFn.DeleteObject failed to remove ObjectId ${objectId}. Error: ${e.message}`)
             }
 
@@ -300,6 +369,7 @@ module.exports = function(dbPoolConnection) {
             }
 
         },
+        getStudentProject: getStudentProject,
         addStudentProjectLink: async function (studentId, projectId){
 
             try {
@@ -317,6 +387,17 @@ module.exports = function(dbPoolConnection) {
 
             } catch (e) {
                 console.log(e)
+            }
+
+        },
+        deleteStudentProjectLink: async linkId => {
+
+            try {
+                
+                return await newDBQuery(`DELETE FROM student_project`, { id: linkId })
+
+            } catch (e) {
+                throw new Error(`Failed to delete StudentProjectLink ${linkId}. Error: ${e.message}`)
             }
 
         }

@@ -19,12 +19,12 @@
             <div class="p-rel">
                 <div class="dropdown searchResults"></div>
             </div>
-            <div class="flex-box selectedItems" id="selectedProjects"></div>
+            <div class="flex-box selectedItems" id="selectedProjects">
+            </div>
         </div>
-        <%- include('../FileUpload') %>
-        <div class="col-100 d-f right">
+        <%- include('../FileUpload', { elementId: 'studentFiles', multiple: false }) %>
+        <div class="col-100 d-f right <%= noSubmit ? 'hide' : '' %>">
             <input type="submit" name="submit" id="">
-        </div>
+        </div>        
     </form>
 </div>
-

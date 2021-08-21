@@ -11,40 +11,39 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     </style>
     <link rel="stylesheet" href="/public/css/main.css">
+    <script src="/public/js/navbar.js"></script>
     <script src="/public/js/client.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-light bg-light admin-navbar">
         <a class="navbar-brand" href="#">
-            <img id="tech-colab-logo" src="/public/images/logo.gif" class="d-inline-block align-top" alt="">
+            <h2>TechColab</h2>
         </a>
-        <h1 class="display-1">Administration</h1>
+        <h3 class="">Administration</h3>
     </nav>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-1"></div>
-            <div class="col-10">
-                
-                <% if(Content == "Admin") { %>
-                    <%- include('partials/Admin/Admin.ejs'); %>
-                <!-- <% }else if(Content === 'Login'){ %>
-                    <%- include('partials/Admin/Login') %> -->
-                <% }else if(Content == "AddStudent"){ %>
-                    <%- include('partials/Admin/AddStudent.ejs'); %>
-                <% }else if(Content == "Students"){ %>
-                    <%- include('partials/Admin/Students.ejs'); %>
-                <% }else if(Content == "AddProject"){ %>
-                    <%- include('partials/Admin/AddProject.ejs'); %>
-                <% }else if(Content == "Projects"){ %>
-                    <%- include('partials/Admin/Projects.ejs'); %>
-                <% }else{ %>
-                    <%- include('partials/Error.ejs'); %>
-                <% } %>
-                
+    <main>
+        <%- include('partials/Navbar') %>
+        <div class="pane-outer">
+            <div class="">
+                <div class="pane">
+                    <% if(Content == "Admin") { %>
+                        <%- include('partials/Admin/Admin.ejs'); %>
+                    <!-- <% }else if(Content === 'Login'){ %>
+                        <%- include('partials/Admin/Login') %> -->
+                    <% }else if(Content == "AddStudent"){ %>
+                        <%- include('partials/Admin/AddStudent.ejs'); %>
+                    <% }else if(Content == "Students"){ %>
+                        <%- include('partials/Admin/Students.ejs'); %>
+                    <% }else if(Content == "AddProject"){ %>
+                        <%- include('partials/Admin/AddProject.ejs'); %>
+                    <% }else if(Content == "Projects"){ %>
+                        <%- include('partials/Admin/Projects.ejs'); %>
+                    <% }else{ %>
+                        <%- include('partials/Error.ejs'); %>
+                    <% } %>
+                </div>
             </div>
-            <div class="col-1"></div>
         </div>
-    </div>
-    
+    </main>    
 </body>
 </html>

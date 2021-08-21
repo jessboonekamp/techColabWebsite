@@ -1,4 +1,4 @@
-window.onload = async () => {
+window.addEventListener('load', async e => {
 
     bindFn(document.getElementsByClassName('bin'), deleteObject);
 
@@ -8,9 +8,11 @@ window.onload = async () => {
 
     bindFn(document.getElementsByTagName('body'), hideDropdowns);
 
-    bindFn(document.getElementsByTagName('form')[0], submitForm, null, 'submit')
+    bindFn(document.getElementsByTagName('form')[0], submitForm, null, 'submit');
 
-}
+    bindFn(document.getElementById('studentFiles'), addFileToList, [document.getElementsByClassName('attachedFiles')[0]], 'change')
+
+});
 
 function hideDropdowns(e) {
 
@@ -70,53 +72,135 @@ async function deleteObject(e){
 
 }
 
-async function editStudent(e, form, studentId){
+async function uploadFiles(fileEl, entityType, objectId) {
+
+    try {
+
+        let form = new FormData(document.getElementsByTagName('form')[0]);
+        ['biography','last_name','first_name'].forEach(p => form.delete(p));
+
+
+
+        let apiRes = await fetch(`/${entityType}/${objectId}/addFiles`, { method: 'POST', body: form });
+
+
+
+
+    } catch (e) {
+        console.log(e)
+        newNotificationMessage(e.message, 'error')
+    }
+
+}
+
+async function deleteObjectLink(objectId, entityType){
+
+    try {
+
+        let apiRes = await fetch(`/admin/${entityType}/link/${objectId}`, { method: 'DELETE' });
+
+        if(apiRes.status = 204) return;
+
+        apiRes = await apiRes.json();
+        
+        if(apiRes?.Message) throw apiRes.Message;
+
+    } catch (e) {
+        console.log(e)
+        newNotificationMessage(e.message, 'error')
+    }
+}
+
+async function editStudent(e, form, studentId, saveBtn){
+
+    let studentModal = document.getElementById('editStudentDialog');
+    let modalFooter = document.getElementsByClassName('modal-footer')[0];
 
     if(form){
 
-        let payload = formToJSON(form)
+        // let payload = formToJSON(form)
+        form = new FormData(document.getElementsByTagName('form')[0]);
 
-        delete payload.Files;
+        // delete payload.Files;
+        form.delete('title');
+        if(form.get('Files')){
+           
+            let fileEl = document.getElementById('studentFiles');
+            if(fileEl.files.length) await uploadFiles(fileEl, 'student', studentId)
 
-        let apiRes = await fetch((new URL(window.location.href)).pathname + `/${studentId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json'}, body: payload });
+        }
+
+        getProjectSelection(form)
+
+        //let apiRes = await fetch((new URL(window.location.href)).pathname + `/${studentId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json'}, body: payload });
+        let apiRes = await fetch((new URL(window.location.href)).pathname + `/${studentId}`, { method: 'PATCH', body: form });
         let status = apiRes.status;
         apiRes = await apiRes.json();
         newNotificationMessage(apiRes.Message, status == 200 ? 'success' : 'error')
-        return
+        return studentModal.style.display = 'none'
 
     }
 
-    let studentModal = document.getElementById('editStudentDialog');
-
     form = document.getElementsByTagName('form')[0];
 
-    form = new FormData(form)
+    form = new FormData(form);
 
     let ct = e.currentTarget;
+    studentId = ct.getAttribute('data-studentid');
 
-    let student = JSON.parse(ct.getAttribute('student'));
-    console.log(student)
+    let student = await getStudent(studentId);
+    let projList = document.getElementById('selectedProjects');
+    projList.innerHTML = '';
+    document.getElementsByClassName('noProject')[0]?.remove()
+    if(student?.projects?.length){
+
+       //thisOpt.childNodes[1].setAttribute('data-linkid', )
+        student.projects.map(p => {
+            let thisOpt = addSelectOption(p.title, 'project', p.id, true);
+            thisOpt.childNodes[1].setAttribute('data-linkid', p.link_id);
+            projList.appendChild(thisOpt)
+        })
+
+    } else{
+        let noVal = document.createElement('div');
+        noVal.innerText = 'This student isn\'t collaborating on any projects yet';
+        noVal.classList.add('no-val-placeholder', 'noProject');
+        projList.appendChild(noVal)
+    }
 
     document.querySelectorAll('input[type="text"], textarea').forEach(node => {
 
         let key = node.getAttribute('name');
 
-        node.value = student[key];
+        node.value = student[key] && /[a-zA-Z]{0,}/.exec(student[key])?.length ? student[key] : '';
 
         form.set(key, student[key]);
 
     });
 
     form.set('id', student.id);
+    saveBtn = document.getElementById('saveStudent');
+    if(saveBtn){
 
-    let saveBtn = document.getElementById('saveStudent');
+        console.log('Removing Event...');
 
-    console.log('Removing Event...')
-    saveBtn.removeEventListener('click', editStudent);
+        let newSaveBtn = document.createElement('button');
+        newSaveBtn.classList = saveBtn.classList;
+        newSaveBtn.innerText = saveBtn.innerText;
+        newSaveBtn.id = saveBtn.id;
+    
+        modalFooter.replaceChild(newSaveBtn, saveBtn);
+        saveBtn = newSaveBtn
+    }
+    
 
     console.log('Binding Event...')
-    saveBtn.addEventListener('click', async e => editStudent(null, form, student.id));
+    saveBtn.addEventListener('click', async e => editStudent(null, 'get', student.id));
     
+    document.getElementById('closeDialog').addEventListener('click', e => {
+        studentModal.style.display = 'none'
+    })
+
     studentModal.style.display = 'block'
 
 
@@ -199,7 +283,7 @@ async function searchEntity(e, entityType){
 
 }
 
-function addSelectOption(text, entityType, dataAttrVal){
+function addSelectOption(text, entityType, dataAttrVal, isCommitted){
 
     let o = document.createElement('div');
     o.classList.add('selected-opt');
@@ -209,8 +293,22 @@ function addSelectOption(text, entityType, dataAttrVal){
     let s = document.createElement('span');
     s.innerText = text;
     let i = document.createElement('img');
+    i.classList.add('btn-icon');
+    if(isCommitted) i.classList.add('object-committed');
     i.src = '/public/images/icons/bin.svg';
-    i.addEventListener('click', e => e.currentTarget.parentElement.remove());
+    i.addEventListener('click', async e => {
+
+      
+
+        if(e.target.classList.contains('object-committed')){
+
+            await deleteObjectLink(Number(e.target.getAttribute('data-linkid')), entityType)
+
+        }
+
+        e.target?.parentElement?.remove();
+
+    });
     o.alt = 'Bin';
     o.appendChild(s);
     o.appendChild(i);
@@ -249,13 +347,13 @@ function newNotificationMessage(message, className){
     let currentAlerts = document.getElementsByClassName('alert');
     if(currentAlerts.length) currentAlerts[0].remove();
 
-    let body = document.getElementsByTagName('body')[0]
+    let target = document.getElementsByClassName('pane-outer')[0];
 
     let a = document.createElement('div');
     a.classList.add('alert', `alert-${className}`, 'action-msg')
     a.innerText = message;
 
-    body.appendChild(a)
+    target.appendChild(a)
 
     
 
@@ -268,19 +366,12 @@ async function submitForm(e){
     try {
         
         console.log(e)
-        let form = formToJSON(e.target);
+        let form = new FormData(e.target); //formToJSON(e.target);
 
-        let selectedProjs = (convertNodeListToArray(document.querySelectorAll(`div.selected-opt[data-project]`))).map(el => {
-            return Number(el.getAttribute('data-project'))
-        });
-
-        if(selectedProjs.length) {
-            form = JSON.parse(form);
-            form.ProjectIDs = selectedProjs;
-            form = JSON.stringify(form)
-        }
+        getProjectSelection(form);
         
-        let apiRes = await fetch(window.location.href, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: form })
+        //let apiRes = await fetch(window.location.href, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: form })
+        let apiRes = await fetch(window.location.href, { method: 'POST', body: form })
 
         status = apiRes.status;
 
@@ -295,6 +386,20 @@ async function submitForm(e){
     } catch (e) {
         console.log(e)
         newNotificationMessage(e.message, 'error')
+    }
+
+}
+
+function getProjectSelection(form) {
+    let selectedProjs = (convertNodeListToArray(document.querySelectorAll(`div.selected-opt[data-project]`))).map(el => {
+        return Number(el.getAttribute('data-project'));
+    });
+
+    if (selectedProjs.length) {
+        form.set('ProjectIDs', selectedProjs);
+        // form = JSON.parse(form);
+        // form.ProjectIDs = selectedProjs;
+        // form = JSON.stringify(form)
     }
 
 }
@@ -317,4 +422,89 @@ function formToJSON(form){
     })
 
     return JSON.stringify(o)
+}
+
+async function addFileToList(e, listEl){
+
+    let el = e.target;
+    let f = el.files;
+
+    async function readFile(file){
+
+        return await new Promise((resolve, reject) => {
+
+            let fileReader = new FileReader();
+            fileReader.readAsDataURL(file)
+            fileReader.onload = () => resolve(fileReader.result);
+            fileReader.onerror = error => reject(error);
+            return fileReader
+
+        })
+
+    }
+
+    for(let i = 0; i < f.length; i++){
+
+        let thisFile = f[i];
+        let o = document.createElement('div');
+        o.classList.add('selected-opt', 'd-f');
+        let s = document.createElement('div');
+        s.classList.add('file')
+        s.style.backgroundImage = `url("` + await readFile(thisFile) + `")`;
+        o.appendChild(s);
+        let img = document.createElement('img');
+        img.setAttribute('data-imagename', thisFile.name);
+        img.src = '/public/images/icons/bin.svg';
+        img.classList.add('btn-icon', 'preview-trash-bin');
+        img.addEventListener('click', e => {
+            
+            let t = e.target;
+
+            // Get this file's imagename attribute
+            let thisFile = t.getAttribute('data-imagename');
+            
+            // Create a new array of files, omitting the one that was clicked for removal
+            let newFiles = Array.from(f).filter(f => { return f.name !== thisFile});
+
+            // Recreate the Input File element
+            let newEl = document.createElement('input');
+            newEl.type = 'file';
+            newEl.name = 'Files';
+            newEl.id = el.id;
+        
+            // Transfer the remaining files to the new element
+            let dt = new DataTransfer();
+            newFiles.forEach(f => { dt.items.add(f) });
+            newEl.files = dt.files;
+
+            // Remove the old element
+            // Append the new element
+            el.parentElement.replaceChild(newEl, el);
+
+            // Rebind existing events
+            bindFn(newEl, addFileToList, [ listEl ], 'change');
+        
+            // Remove the file that had its Bin icon clicked
+            e.target.parentElement.remove()
+            
+        });
+
+        o.appendChild(img);
+        listEl.appendChild(o)
+
+    }
+
+}
+
+async function getStudent(id){
+    try {
+        
+        let apiRes = await fetch(`/admin/student/search?id=${id}`);
+
+        return (await apiRes.json()).Data
+
+
+    } catch (e) {
+        throw new Error(`Couldn't fetch Student ${id}. Error: ${e.message}`)
+    }
 }
