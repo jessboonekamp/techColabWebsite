@@ -1,22 +1,27 @@
-<h1 class="display-5">Projects</h1>
+<h4 class="page-header">Projects</h4>
 <div class="card-container">
-    <% console.log(Projects) %>
     <% for(var i = 0; i < Projects.length; i++){%>
         <% let s = Projects[i] %>
+        <% console.log(s) %>
         <div class="card">
             <div class="card-body student-card-body">
                 <div>
-                    <img class="student-image" src="<%= s.path %>" alt="">
+                    <% if(s?.media[0]?.path) { %>
+                        <img class="student-image" src="<%= s.media[0] ? s.media[0].path : '' %>" alt="">
+                    <% } else { %>
+                        <div class="student-image student-image-none"></div>
+                    <% } %>
+
                 </div>
                 <div class="student-card-content">
                     <h5 class="card-title"><%= s.title %></h5>
                     <h6 class="card-subtitle mb-2 text-muted"></h6>
                     <p class="card-text"><%= s.description %></p>
                     <div class="student-card-button">
-                        <!-- <a href="#" class="card-link custom-btn editProject" student="<%= JSON.stringify(s) %>">
+                        <a href="#" class="card-link custom-btn editProject" data-projectid="<%= s.id %>">
                             <img src="/public/images/icons/pencil.svg" alt="" class="btn-img">
                             <span>Edit</span>
-                        </a> -->
+                        </a>
                         <a href="#" class="card-link custom-btn bin" data-type="project" data-id="<%= s.id %>">
                             <img src="/public/images/icons/bin.svg" alt="" class="btn-img">
                             <span>Delete</span>
@@ -26,4 +31,21 @@
                 </div>
             </div>
     <% } %>
+</div>
+
+<div class="modal" tabindex="-1" role="dialog" id="editProjectDialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Project</h5>
+            </div>
+            <div class="modal-body">
+                <%- include('ProjectForm', { noSubmit: true, modal: true }) %>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="saveProject">Save changes</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="closeDialog">Close</button>
+            </div>
+        </div>
+    </div>
 </div>

@@ -5,14 +5,16 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administration</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="/bs_scripts/bootstrap.min.js"></script>
     <link rel="stylesheet" href="/bs_styles/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment-with-locales.min.js" integrity="sha512-LGXaggshOkD/at6PFNcp2V2unf9LzFq6LE+sChH7ceMTDP0g2kn6Vxwgg7wkPP7AAtX+lmPqPdxB47A0Nz0cMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     </style>
     <link rel="stylesheet" href="/public/css/main.css">
-    <script src="/public/js/navbar.js"></script>
-    <script src="/public/js/client.js"></script>
+    <script src="/public/js/navbar.js" type="module"></script>
+    <script src="/public/js/client.js" type="module"></script>
 </head>
 <body>
     <nav class="navbar navbar-light bg-light admin-navbar">
@@ -27,19 +29,21 @@
             <div class="">
                 <div class="pane">
                     <% if(Content == "Admin") { %>
-                        <%- include('partials/Admin/Admin.ejs'); %>
+                        <%- include('partials/Admin/Admin'); %>
                     <!-- <% }else if(Content === 'Login'){ %>
                         <%- include('partials/Admin/Login') %> -->
                     <% }else if(Content == "AddStudent"){ %>
-                        <%- include('partials/Admin/AddStudent.ejs'); %>
+                        <%- include('partials/Admin/AddStudent'); %>
                     <% }else if(Content == "Students"){ %>
-                        <%- include('partials/Admin/Students.ejs'); %>
+                        <%- include('partials/Admin/Students'); %>
                     <% }else if(Content == "AddProject"){ %>
-                        <%- include('partials/Admin/AddProject.ejs'); %>
+                        <%- include('partials/Admin/AddProject'); %>
                     <% }else if(Content == "Projects"){ %>
-                        <%- include('partials/Admin/Projects.ejs'); %>
-                    <% }else{ %>
-                        <%- include('partials/Error.ejs'); %>
+                        <%- include('partials/Admin/Projects'); %>
+                    <% } else if(Content === 'About'){ %>
+                        <%- include('partials/Admin/About'); %>
+                    <%  } else{ %>
+                        <%- include('partials/Error'); %>
                     <% } %>
                 </div>
             </div>

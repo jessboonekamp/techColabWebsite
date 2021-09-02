@@ -1,3 +1,4 @@
+const { query } = require('express');
 const { resolve } = require('path');
 
 module.exports = function(dbPoolConnection) {
@@ -7,6 +8,7 @@ module.exports = function(dbPoolConnection) {
     const bcrypt = require('bcrypt');
     const path = require('path');
     const fs = require('fs').promises;
+    const maxCount = 10;
 
     // Utility Functions
     function validateAsId(value){
@@ -26,6 +28,8 @@ module.exports = function(dbPoolConnection) {
 
         return Object.keys(object).map(k => `${k} = '${object[k]}'`).join(delimiter)
     }
+
+
 
     
     async function newDBQuery(statement, conditionObj){
@@ -50,7 +54,7 @@ module.exports = function(dbPoolConnection) {
             dbPoolConnection.query(sqlQuery, function(err, result){
     
                 if (err) return reject(err);
-                return resolve(result)
+                return resolve(result[0])
     
             });
         })
@@ -82,18 +86,28 @@ module.exports = function(dbPoolConnection) {
     
     }
 
-    async function getStudentProject(studentId){
+    async function getFile(fileId){
+        try {
+            
+            return ( await newDBQuery(`SELECT * FROM media`, { id: fileId }))[0]
+
+        } catch (e) {
+            throw new Error(`Failed to get file ${fileId}. Error: ${e.message}`)
+        }
+    }
+
+    async function getStudentProject(objectId, entityType){
 
         try {
             
-            if(!validateAsId(studentId)) throw new Error(`Invalid StudentId. Not a number.`);
-
+            if(!validateAsId(objectId)) throw new Error(`Invalid ObjectId. Not a number.`);
+            
             return await new Promise((resolve, reject) => {
                 dbPoolConnection.query(`
                     SELECT Proj.*, SP.id AS link_id FROM student_project AS SP
-                        LEFT JOIN project AS Proj
-                    ON Proj.id = SP.project_id
-                        WHERE SP.student_id = ${studentId}                    
+                        LEFT JOIN ${entityType} AS Proj
+                    ON Proj.id = SP.${entityType}_id
+                        WHERE SP.${entityType === 'project' ? 'student' : 'project'}_id = ${objectId}                    
                 `, function (err, result){
                     if(err) return reject(err);
                     return resolve(result);
@@ -106,6 +120,52 @@ module.exports = function(dbPoolConnection) {
         }
     }
 
+    async function addStudentProjectLink(studentId, projectId){
+
+        try {
+
+            console.log(arguments)
+
+            if(!validateAsId(studentId) || !validateAsId(projectId)) throw new Error(`Invalid Student/Project Id. Not a number.`);
+
+            return await new Promise((resolve, reject) => {
+                dbPoolConnection.query(`INSERT INTO student_project (student_id, project_id) VALUES(${studentId}, ${projectId})`, function (err, result){
+                    if(err) return reject(err);
+                    return resolve(result);
+                })
+            })
+
+        } catch (e) {
+            console.log(e)
+        }
+
+    }
+
+    async function getPaginationString(queryObj){
+        
+        let start = queryObj?.start,
+            end = queryObj?.end,
+            page = queryObj?.page;
+
+        if(start) delete queryObj.start;
+        if(end) delete queryObj.end;
+        if(page) delete queryObj.page;
+
+        start = validateAsId(start) && start > 1 ? start : 0;
+        end = validateAsId(end) && end >= 1 ? end : maxCount;
+        pageNum = validateAsId(page) && page !== 0 ? page : 1;
+
+        return {
+            query: queryObj,
+            pagination: {
+                start: start,
+                end: end,
+                page: pageNum
+            }
+        }
+
+    }
+
     return {
 
         encryptString: async function (string){
@@ -114,12 +174,30 @@ module.exports = function(dbPoolConnection) {
         decryptString: async function (string, encryptedString){
             return await bcrypt.compare(string, encryptedString)
         },
-        searchStudents: async function (query){
-            return await new Promise((resolve, reject) => {
+        searchEntity: async function (query, entityType, mapToContext){
+
+            let pagination = await getPaginationString(query);
+
+            query = pagination.query;
+
+            let { start, end, page } = pagination.pagination;
+
+            let paginationStr = ` LIMIT ${maxCount} OFFSET ${start};`;
+
+            console.log(187, query)
+
+            query = Object.keys(query).length ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : '';
+
+            let resultSet = {};
+
+            let searchResults = await new Promise((resolve, reject) => {
 
 
-                let sqlQuery = `SELECT * FROM student ${query ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : ''}`
-
+                let sqlQuery = `
+                    SELECT * FROM ${entityType} ${query} ${paginationStr}
+                    SELECT COUNT(*) FROM ${entityType} ${query} ${paginationStr}
+                `;
+                console.log(sqlQuery)
                 dbPoolConnection.query(sqlQuery, function(err, result){
 
                     if(err) return reject(err)
@@ -127,19 +205,82 @@ module.exports = function(dbPoolConnection) {
                     return resolve(result)
                 })
             });
+
+            // console.log(204, searchResults)
+
+            resultSet.page = page;
+            resultSet.start = start;
+            resultSet.end = end;
+            resultSet.totalRows = searchResults[1][0]['COUNT(*)'];
+
+            if(typeof mapToContext !== 'string') {
+                resultSet.Data = searchResults[0];
+                return resultSet
+            }
+
+            switch(mapToContext){
+
+                case 'project':
+
+                    resultSet.Data = await Promise.all(
+
+                        searchResults[0].map(async obj => {
+                        
+                            let prof = await this.getProjectProfile(obj.id, obj); 
+        
+                            prof.students = await Promise.all(prof.students.map(
+                                async student => {
+
+                                    let studPhoto = (await getMedia(student.id, 'student'))[0];
+
+                                    return {
+                                        ...student,
+                                        profilePhoto: studPhoto
+                                    }
+                                    
+                                })
+                            ); 
+        
+                            return prof
+        
+                        })
+                    )
+
+                break;
+
+                default:
+                    throw new Error(`Invalid context mapping provided ${mapToContext}.`)
+
+            }
+
+            
+
+            console.log(204, resultSet)
+
+            return resultSet
+
         },
-        searchProjects: async function (query){
-            return await new Promise((resolve, reject) => {
-                let sqlQuery = `SELECT * FROM project ${query ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : ''}`
-                dbPoolConnection.query(sqlQuery, function(err, res) {
+        // searchEntity: async function (query, entityType, mappingFn){
 
-                    if(err) return reject(err);
+        //     let searchResults = await new Promise((resolve, reject) => {
 
-                    return resolve(res)
 
-                })
-            }); 
-        },
+        //         let sqlQuery = `SELECT * FROM ${entityType} ${query ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : ''}`
+
+        //         dbPoolConnection.query(sqlQuery, function(err, result){
+
+        //             if(err) return reject(err)
+
+        //             return resolve(result)
+        //         })
+        //     });
+
+        //     if(!typeof mappingFn === 'function') {
+
+        //     }
+
+
+        // }
         uploadFiles: async function (req, entityType, defaultPath) {
     
             try {
@@ -209,10 +350,21 @@ module.exports = function(dbPoolConnection) {
                 if(!entityType) throw new Error(`No EntityType specified.`);
         
                 const addFile = async file => {
+
                     let { name, filePath } = file;
-                    return await new Promise((resolve, reject) => {
-                        let sqlQuery = `INSERT into media ( name, path, owning_id, entity_type) VALUES ('${name}', '${filePath.replace(/\\/g, '/')}', '${owningObjId}', '${entityType}')`;
+
+                    // Check if the file is marked as the hero image
+                    let is_hero = file?.is_hero;
+
+                    console.log(344, file)
+
+                    file = await new Promise((resolve, reject) => {
+
                         console.log('Updating DB filestore...');
+                        let sqlQuery = `
+                            INSERT into media (name, path, owning_id, entity_type) VALUES ('${name}', '${filePath.replace(/\\/g, '/')}', '${owningObjId}', '${entityType}')
+                        `;
+                     
                         dbPoolConnection.query(sqlQuery, function(err, result){
             
                             if (err) return reject(err);
@@ -221,6 +373,15 @@ module.exports = function(dbPoolConnection) {
             
                         });
                     })
+
+                    console.log(356, file)
+                    // If it's set as the hero image, update the object store, remove all existing flags and replace with this one
+                    if(is_hero){
+                        await this.setHeroMedia(file.insertId, owningObjId)
+                    }
+
+                    return file.insertId
+
                 };   
                 
                 return await Promise.all(uploadedFiles.map(file => addFile(file)))
@@ -232,13 +393,14 @@ module.exports = function(dbPoolConnection) {
         
         },    
         getMedia: getMedia,
-        deleteMedia: async function (owningObjId, fileId){
+        getFile: getFile,
+        deleteMedia: async function (fileId){
 
             try {
                 
-                if(!validateAsId(owningObjId) || !validateAsId(fileId)) throw new Error(`Invalid ObjectId or FileId. Must be numbers.`);
+                if(!validateAsId(fileId)) throw new Error(`Invalid FileId. Must be a number.`);
 
-                return await newDBQuery(`DELETE FROM media`, { id: fileId, owning_id: owningObjId })
+                return await newDBQuery(`DELETE FROM media`, { id: fileId })
 
             } catch (e) {
                 throw new Error(`Failed to delete FileId ${fileId}. Error: ${e.message}.`)      
@@ -246,17 +408,17 @@ module.exports = function(dbPoolConnection) {
 
         },
         getStudent: getStudent,
-        getStudentProfile: async function (studentId){
+        getStudentProfile: async function (studentId, student){
 
             try {
 
-                let student = (await getStudent(studentId))[0];
+                if(!student) student = (await getStudent(studentId));
 
                 let id = student.id;
 
                 let profilePhoto = (await getMedia(id, 'student'))[0];
 
-                let projects = await getStudentProject(id)
+                let projects = await getStudentProject(id, 'project')
 
                 console.log(438, projects)
 
@@ -267,20 +429,63 @@ module.exports = function(dbPoolConnection) {
                 }
 
                 o.id = id;
-
+                console.log(258, o)
                 return o
         
             } catch (e) {
                 throw new Error(`Failed to get Student Profile for Student ${studentId}. Error: ${e.message}`)
             }
         },
+        getProjectProfile: async function (projectId, project){
+
+            try {
+                
+                if(!project) project = (await this.getProject(projectId));
+
+                let id = project.id
+
+                let media = await getMedia(projectId, 'project');
+
+                let students = await getStudentProject(id, 'student');
+                console.log(297, students)
+                
+                let pro = {
+                    ...project,
+                    media: media,
+                    students: students
+                }
+
+                pro.id = id
+                // console.log(280, pro)
+                return pro
+            } catch (e) {
+                throw new Error(`Failed to get Project Portfolio ${projectId}. Error: ${e.message}`)
+            }
+        },
         getProject: async function (projectId){
 
-            let sqlQuery = `SELECT * FROM project` ;
-            let conditionObj;
-            if(projectId) conditionObj = { id: projectId };
+            try {
 
-            return await newDBQuery(sqlQuery, conditionObj)
+                let sqlQuery = `SELECT * FROM project WHERE `;
+                if(projectId) sqlQuery += `id = ${projectId}`;
+                console.log(sqlQuery)
+                return await new Promise((resolve, reject) => {
+                    dbPoolConnection.query(sqlQuery, function(err, result){
+            
+                        if (err) return reject(err);
+                        return resolve(result[0])
+            
+                    });
+                })
+
+                
+
+            } catch (e) {
+
+                throw new Error(`Project ${projectId} could not be found!`)
+            }
+   
+
         },
         deleteObject: async function (objectId, entityType){
             
@@ -357,39 +562,21 @@ module.exports = function(dbPoolConnection) {
 
                 if(!validateAsId(objectId)) throw new Error(`Invalid ObjectId. Not a number.`);
 
+                console.log(406, objectId, updateObj)
                 return await new Promise((resolve, reject) => {
-                    dbPoolConnection.query(`UPDATE project SET (${newDBQueryFilterString(updateObj, 'update')})`, function (err, result){
-                        if(err) return reject(err);
-                        return resolve(result);
-                    })
-                })
-
-            } catch (error) {
-                throw new Error(`AppFn.PatchProject failed to patch ObjectId ${objectId}. Error: ${e.message}`)
-            }
-
-        },
-        getStudentProject: getStudentProject,
-        addStudentProjectLink: async function (studentId, projectId){
-
-            try {
-
-                console.log(arguments)
-
-                if(!validateAsId(studentId) || !validateAsId(projectId)) throw new Error(`Invalid Student/Project Id. Not a number.`);
-
-                return await new Promise((resolve, reject) => {
-                    dbPoolConnection.query(`INSERT INTO student_project (student_id, project_id) VALUES(${studentId}, ${projectId})`, function (err, result){
+                    dbPoolConnection.query(`UPDATE project SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${objectId}`, function (err, result){
                         if(err) return reject(err);
                         return resolve(result);
                     })
                 })
 
             } catch (e) {
-                console.log(e)
+                throw new Error(`AppFn.PatchProject failed to patch ObjectId ${objectId}. Error: ${e.message}`)
             }
 
         },
+        getStudentProject: getStudentProject,
+        addStudentProjectLink: addStudentProjectLink,
         deleteStudentProjectLink: async linkId => {
 
             try {
@@ -398,6 +585,71 @@ module.exports = function(dbPoolConnection) {
 
             } catch (e) {
                 throw new Error(`Failed to delete StudentProjectLink ${linkId}. Error: ${e.message}`)
+            }
+
+        },
+        newStudentProjectLinkSet: async (linkIDs, objectID, entityType) => {
+            if (linkIDs) {
+                console.log('Binding Student to Projects...');
+                if (linkIDs.includes(','))
+                    linkIDs = linkIDs.split(',');
+                else
+                    linkIDs = [linkIDs];
+        
+                // await Promise.all(objectIDs.map(objID => addStudentProjectLink(object[0].id, objID)));
+                await Promise.all(linkIDs.map(objID => {
+                    let args = [objectID, objID];
+                    
+                    if(entityType == "project") args = args.reverse()
+
+                    console.log(args)
+
+                    return addStudentProjectLink(...args)}));
+        
+            }
+        },
+        getStudentProjectLinks: async (objectID, entityType) => {
+            try {
+
+                if(!validateAsId(objectID)) throw new Error(`Invalid object id. Not a number.`);
+
+                if(!validateAsEntity(entityType)) throw new Error(`Invalid entityType.`);
+
+                let statement = `SELECT * FROM student_project`;
+                let condition = entityType === 'student' ? { student_id: objectID } : { project_id: objectID }
+
+                return await newDBQuery(statement, condition)
+
+            } catch (e) {
+                console.log(e)
+            }
+        },
+        getAboutBlurbs: async () => {
+
+            try {
+               
+                return await newDBQuery(`SELECT * FROM about`)
+                
+            } catch (e) {
+                throw new Error(`GetAboutBlurbs failed. Error: ${e.message}.`)
+            }
+
+        },
+        setHeroMedia: async (id, owningId) => {
+
+            try {
+
+                console.log(626, arguments)
+
+                if(!validateAsId(id) || !validateAsId(owningId)) throw new Error(`Invalid Id/OwningId.`);
+                
+                await newDBQuery(`UPDATE media SET is_hero = NULL`, { owning_id: owningId });
+                
+                await newDBQuery(`UPDATE media SET is_hero = true`, { id: id })
+
+
+            } catch (e) {
+                throw new Error(`SetHeroImage failed. Error: ${e.message}.`)
             }
 
         }

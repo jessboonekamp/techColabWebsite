@@ -12,6 +12,7 @@
     "express-fileupload": "^1.2.1",
     "express-session": "^1.17.2",
     "jsdom": "^17.0.0",
+    "moment": "^2.29.1",
     "mysql": "^2.18.1"
   },
   "devDependencies": {},

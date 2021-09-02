@@ -33,6 +33,7 @@ app.use(express.json());
 //  -src="bs_styles/file_name"
 app.use('/bs_scripts', express.static(__dirname + bootstrapDir + 'js'));
 app.use('/bs_styles', express.static(__dirname + bootstrapDir + 'css'));
+app.use('/modules', express.static(__dirname + 'node_modules/moment'));
 
 const webAppConfig = require('./app.config.json');
 let { port, database, adminUser, appName } = webAppConfig;
@@ -67,7 +68,8 @@ app.get('/', async (req, res, next) => {
 
         // Code here
         resObj = {
-            Content: 'Home'
+            Content: 'Home',
+            AppName: appName
         }
     
     } catch (e) {
@@ -87,6 +89,27 @@ app.get('/', async (req, res, next) => {
     resObj.AppName = appName
 
     res.status(statCode || 200).render(pageName, resObj)
+
+});
+
+app.get('/:entityType', async (req, res, next) => {
+
+    try {
+        
+        const entityTypeValidator = ['student', 'project','media'];
+
+        let entityType = req.params.entityType;
+        if(!entityTypeValidator.includes(entityType)){
+            statCode = 400;
+            throw new Error(`Bad request. No EntityType specifid.`)
+        }
+
+
+
+
+    } catch (e) {
+        
+    }
 
 });
 
@@ -247,7 +270,7 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 async function newStudent(firstName, lastName, biography){
                     let thisStudent = await AppFn.getStudent(null, firstName, lastName);
 
-                    if(!thisStudent.length){
+                    if(!thisStudent){
                         console.log('Creating Student')
                         await AppFn.createStudent(firstName,lastName, biography);
                         return await AppFn.getStudent(null, firstName, lastName)
@@ -261,10 +284,10 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 let thisStudent = await newStudent(firstName, lastName, biography);
 
                 if(thisStudent.length && uploadedFiles.length){
-                    await AppFn.updateDbFileStore(thisStudent[0].id, uploadedFiles, 'student')
+                    await AppFn.updateDbFileStore(thisStudent.id, uploadedFiles, 'student')
                 }
 
-                await newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent);
+                await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
 
                 // resObj.Students = await searchStudents();
                 // content = 'Students';
@@ -298,55 +321,68 @@ app.all("/admin/addProject", async(req, res, next) => {
     // Define function parameters
     let statCode, resObj = { AppName: appName }, content;
 
-    // Define swtich-case to cover request methods, GET, POST
-    switch (req.method) {
+    try {
 
-        case "POST":
+        switch (req.method) {
+        
+            case "POST":
+    
+                // Get the body of the request(EXPRESS)
+                let body = req.body
+                // Check if the body exists/Otherwise throw a bad payload error
+                if(!body){
+                    statCode = 400
+                    throw new Error(`Bad Request. No payload specified`)
+                }
+                // Define each attribute of the body.
+                let { title, project_date, project_type, description } = body;
+    
+                // Define the new project function, which should contain a seperate create function.
+                async function newProject(title, project_date, project_type, description) {
+                    // Perform any project data validation
+                    return (await AppFn.createProject(title, project_date, project_type, description))[1][0].id
+                }
+                
+                let projectID = await newProject(title, project_date, project_type, description);
+    
+                let uploadedFiles = await AppFn.uploadFiles(req, 'project', __dirname);
+    
+                if(!uploadedFiles.length) throw new Error(`Files failed to be uploaded`)
+                await AppFn.updateDbFileStore(projectID, uploadedFiles, 'project');
+    
+                await AppFn.newStudentProjectLinkSet(req.body.StudentIDs, projectID, 'project');
+                
+                content = "AddProject"
+    
+            break;
+    
+            case "GET":
+                content = "AddProject"
+            break;
+    
+            default:
+                throw new Error(`Request Method '${req.method}' is not allowed`)
+        }
 
-            // Get the body of the request(EXPRESS)
-            let body = req.body
-            // Check if the body exists/Otherwise throw a bad payload error
-            if(!body){
-                statCode = 400
-                throw new Error(`Bad Request. No payload specified`)
-            }
-            // Define each attribute of the body.
-            let { title, project_date, project_type, description } = body;
-
-            // Define the new project function, which should contain a seperate create function.
-            async function newProject(title, project_date, project_type, description) {
-                // Perform any project data validation
-                return (await AppFn.createProject(title, project_date, project_type, description))[1][0].id
-            }
-            
-            let projectId = await newProject(title, project_date, project_type, description);
-
-            let uploadedFiles = await AppFn.uploadFiles(req, 'project', __dirname);
-
-            if(uploadedFiles.length) await AppFn.updateDbFileStore(projectId, uploadedFiles, 'project');
-
-            content = "Projects"
-
-        break;
-
-        case "GET":
-            content = "AddProject"
-        break;
-
-        default:
-            throw new Error(`Request Method '${req.method}' is not allowed`)
+    } catch (e) {
+        if(!statCode) statCode = 500;
+        console.log(e)
     }
+
+    // Define swtich-case to cover request methods, GET, POST
+    
 
     resObj.Content = content;
     res.status(statCode || 200).render('Admin', resObj)
 });
 
-app.get("/admin/:entityType/search?", async (req, res, next) => {
+///admin
+app.get("/:entityType/search/:id*?", async (req, res, next) => {
 
     let statCode, apiResMsg, apiResData;
 
     try {
-        
+
         let entityType = req.params.entityType;
         if(!entityType || !['student','project','media'].includes(entityType.toLowerCase())){
             statCode = 400;
@@ -354,42 +390,56 @@ app.get("/admin/:entityType/search?", async (req, res, next) => {
         }
 
         let query = req.query;
-        let queryKeys = Object.keys(query);
-        if(!queryKeys.length){
+        const paginationKeys = ['start','end','page'];
+        let queryKeys = Object.keys(query).filter(k => !paginationKeys.includes(k));
+        if(!queryKeys.length && !query?.start){
             statCode = 400;
             throw new Error(`Bad request. No query parameters specified..`)
         }
 
-        let appFn, searchProps;
+        let searchProps = ['id'], useFn, objId = query?.id;
+        let fnArgs = [];
         switch(entityType){
 
             case 'project':
 
-                appFn = 'searchProjects';
-                searchProps = ['title']
+                if(!objId){
+                    searchProps = ['title'];
+                    useFn = 'searchEntity';
+                    fnArgs.push(query, entityType, 'project');
+                } else{
+                    query = objId;   
+                    fnArgs.push(query);
+                    useFn = 'getProjectProfile';
+                }
 
             break;
 
             case 'student':
-
-                appFn = 'searchStudents';
-                searchProps = ['first_name', 'last_name', 'id'];
-
-                if(queryKeys.includes('id')){
-                    appFn = 'getStudentProfile';
-                    query = query.id
+                
+                if(!objId){
+                    searchProps = ['first_name', 'last_name'];
+                    useFn = 'searchEntity';
+                    fnArgs.push(query, entityType);;
+                } else{
+                    query = objId; 
+                    fnArgs.push(query);
+                    useFn = 'getStudentProfile';
                 }
+                               
 
             break
 
         }
 
+
         if(queryKeys.find(k => !searchProps.includes(k))){
             statCode = 400;
             throw new Error(`Bad request. One or more of: ${queryKeys.join(', ')} doesn't exist on EntityType ${entityType}.`)
         }
-        
-        apiResData = await AppFn[appFn](query)
+
+        console.log(fnArgs)
+        apiResData = await AppFn[useFn](...fnArgs)
         
 
     } catch (e) {
@@ -402,9 +452,7 @@ app.get("/admin/:entityType/search?", async (req, res, next) => {
 
     }
 
-    res.status(statCode || 200).send({
-        [apiResMsg ? 'Message' : 'Data']: apiResMsg || apiResData
-    })
+    res.status(statCode || 200).send(apiResData ? apiResData : { Message: apiResMsg })
 
 });
 
@@ -421,9 +469,10 @@ app.all("/admin/students/:studentId*?", async(req, res, next) => {
             // Get all Students. Possible add a year to each student, so we can get all students but from specific years and not pull the entire table.
             // let currentYear = new Date().getFullYear()
             
-            students = await Promise.all((await AppFn.searchStudents()).map(async student => AppFn.getStudentProfile(student.id)));
+            students = await Promise.all((await AppFn.searchEntity(null, 'student')).Data.map(async student => AppFn.getStudentProfile(student.id)));
 
             resObj.Students = students
+            console.log(resObj.Students)
             
             break;
 
@@ -431,7 +480,7 @@ app.all("/admin/students/:studentId*?", async(req, res, next) => {
 
             let updateObj = req.body;
 
-            let projectIds = updateObj.ProjectIDs;
+            let projectIDs = updateObj.ProjectIDs;
 
             delete updateObj.ProjectIDs;
 
@@ -450,7 +499,7 @@ app.all("/admin/students/:studentId*?", async(req, res, next) => {
             }
             
             // Update the projects this student is associated with
-            await newStudentProjectLinkSet(projectIds, thisStudent);
+            await AppFn.newStudentProjectLinkSet(projectIDs, studentId, 'student');
 
             await AppFn.patchStudent(studentId, updateObj);
 
@@ -465,9 +514,6 @@ app.all("/admin/students/:studentId*?", async(req, res, next) => {
             return res.send({
                 Message: 'Student updated!'
             })
-            
-
-            break;
 
         default:
             statCode = 405;
@@ -475,39 +521,73 @@ app.all("/admin/students/:studentId*?", async(req, res, next) => {
     }
 
     resObj.Content = content
-    console.log(resObj)
 
     res.status(statCode || 200).render("Admin", resObj);
 });
 
-app.all("/admin/projects", async(req,res, next) => {
+app.all("/admin/projects/:projectId*?", async(req, res, next) => {
     let statCode, resObj = {Appname: appName}, content;
-    switch (req.method) {
 
-        case "GET":
+    try {
+        
+        switch (req.method) {
 
-            content = "Projects"
+            case "GET":
+    
+                content = "Projects"
+                // Then map each project in array with its media.
+                projects = await Promise.all((await AppFn.searchEntity(null, 'project')).Data.map(async project => AppFn.getProjectProfile(project.id)));
+                // projects = await AppFn.searchEntity(null, 'project')
+                resObj.Projects = projects;
+                console.log(resObj.Projects)
+                break;
+    
+            case "PATCH":
+                let updateObj = req.body;
+                console.log(507, updateObj)
+                let studentIds = updateObj.StudentIDs;
+    
+                delete updateObj.StudentIDs;
+    
+                let projectId = req.params.projectId;
+                if(!projectId || isNaN(Number(projectId))){
+                    statCode = 400
+                    throw new Error(`Bad request. Invalid ProjectID, not a number`)
+                }
+    
+                let thisProject = await AppFn.getProject(projectId);
+                console.log(519,thisProject)
+                if(!thisProject){
+                    statCode = 404;
+                    throw new Error(`Project not found.`)
+                }
+    
+                await AppFn.newStudentProjectLinkSet(studentIds, projectId, 'project')
+    
+                await AppFn.patchProject(projectId, updateObj)
+    
+                let uploadedFiles
+                if(req.files){
 
-            // Then map each project in array with its media.
-            resObj.Projects = await Promise.all((await AppFn.searchProjects()).map(async project => {
+                    uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
+                    if(uploadedFiles.length){
+                        uploadedFiles = await AppFn.updateDbFileStore(projectId, uploadedFiles, 'project')
+                    }
+                }
 
-                let id = project.id;
+                return res.send({
+                    Message: 'Project updated!'
+                })
+    
+            default:
+                statCode = 405;
+                throw new Error(`'${req.method}' is not allowed`)
+        }
 
-                project.media = await AppFn.getMedia(id, 'project');
-  
-                project.id = id;
-
-                return project
-
-
-            }))
-
-            break;
-
-        default:
-            statCode = 405;
-            throw new Error(`'${req.method}' is not allowed`)
+    } catch (e) {
+        console.log(e)
     }
+    
 
 
     resObj.Content = content;
@@ -524,7 +604,7 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
         // Code here
         let params = req.params;
 
-        const entityTypeValidator = ['student','project'];
+        const entityTypeValidator = ['student','project', 'media'];
 
         let entityType = params.entityType?.toLowerCase();
         if(!entityType || !entityTypeValidator.includes(entityType)){
@@ -544,7 +624,7 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
 
                 console.log('Simulating object deletion', entityType, objectId)
 
-                let getFn;
+                let getFn, delFn = 'deleteObject'
                 switch(entityType){
 
                     case 'student':
@@ -561,25 +641,31 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
 
                     case 'media':
 
-                        getFn = 'getMedia';
+                        getFn = 'getFile';
+                        delFn = 'deleteMedia';
 
                     break;
 
                 }
 
+                (await AppFn.getStudentProjectLinks(objectId, entityType)).map(async link => {
+                    await AppFn.deleteStudentProjectLink(link.id)
+                })
+
 
                 let thisObj = await AppFn[getFn](objectId);
-                if(!thisObj.length){
+                console.log(633, thisObj)
+                if(!thisObj){
                     statCode = 404;
                     throw new Error(`Object ${entityType} ${objectId} doesn't exist.`)
                 }
 
-                thisObj = thisObj[0];
+                let fnArgs = [thisObj.id, entityType];
 
                 // Delete the student
                 console.log(`Deleting ${entityType} ${thisObj.id}...`);
 
-                await AppFn.deleteObject(thisObj.id, entityType);
+                await AppFn[delFn](...fnArgs);
 
                 if(['student','project'].includes(entityType)){
 
@@ -590,12 +676,6 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
                 }
                 
                 statCode = 204;
-
-                break;
-
-            case 'PATCH':
-
-                console.log('Simulating object update', entityType, objectId)
 
                 break;
 
@@ -618,7 +698,7 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
     // Respond to Client    
     res.status(statCode || 200).send(resObj[apiResMsg ? 'Message' : 'Data'] = apiResMsg ? apiResMsg : apiResData)
 
-})
+});
 
 app.delete('/admin/:entityType/link/:id', async (req, res, next) => {
 
@@ -656,7 +736,7 @@ app.delete('/admin/:entityType/link/:id', async (req, res, next) => {
 
     res.status(statCode).end()
 
-})
+});
 
 app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
 
@@ -685,6 +765,18 @@ app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
         }
 
         let uploadedFiles = await AppFn.uploadFiles(req, entityType, __dirname);
+        console.log(766, uploadedFiles)
+        let heroImage = req.body?.heroImage;
+        if(heroImage){
+            uploadedFiles = uploadedFiles.map(f => {
+
+                if(f.name === heroImage){
+                    f.is_hero = heroImage
+                }
+
+                return f
+            })
+        }
 
         apiResData = await AppFn.updateDbFileStore(objectId, uploadedFiles, entityType);
         
@@ -704,9 +796,9 @@ app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
         [apiResMsg ? 'Message' : 'Data']: apiResMsg ? apiResMsg : apiResData
     })
 
-})
+});
 
-app.delete('/:entityType/:objectId/files/:fileId', async (req, res, next) => {
+app.all('/:entityType/:objectId/files/:fileId', async (req, res, next) => {
 
     let apiResMsg, statCode;
     
@@ -725,9 +817,42 @@ app.delete('/:entityType/:objectId/files/:fileId', async (req, res, next) => {
             throw new Error(`Bad request. Invalid ObjectId or FileId. Must be a number.`)
         }
 
-        await AppFn.deleteMedia(objectId, fileId);
+        switch(req.method){
 
-        statCode = 204;
+            case 'DELETE':
+
+                await AppFn.deleteMedia(objectId, fileId);
+
+                statCode = 204
+
+            break;
+
+            case 'PATCH':
+
+                console.log(req.method, req.body)
+
+                let body = req.body;
+                if(body?.is_hero){
+
+                    await AppFn.setHeroMedia(fileId, objectId)
+
+                    apiResMsg = `Image heroized!`
+
+                }
+
+
+
+            break;
+
+            default:
+                statCode = 405;
+                throw new Error(`Method ${req.method} is not allowed.`)
+
+        }
+
+
+
+
 
     } catch (e) {
     
@@ -739,12 +864,103 @@ app.delete('/:entityType/:objectId/files/:fileId', async (req, res, next) => {
     
     }
 
-    if(apiResMsg) return res.status(statCode).send({ Message: apiResMsg });
+    if(apiResMsg) return res.status(statCode || 200).send({ Message: apiResMsg });
 
-    res.status(statCode).end()
+    return res.status(statCode || 200).end();
+
+
+});
+
+app.get('/:entityType/:objectId/files', async (req, res, next) => {
+
+    let apiResData, apiResMsg, statCode;
+
+    try {
+        
+        let {entityType, objectId} = req.params;
+        if(!['student', 'project'].includes(entityType) || isNaN(Number(objectId))){
+            statCode = 400;
+            throw new Error(`Bad request. Invalid ObjectId, or entityType`);
+        }
+        
+        apiResData = await AppFn.getMedia(objectId, entityType)
+
+    } catch (e) {
+        apiResMsg = e.message
+        console.log(e)
+    }
+
+    res.status(statCode || 200).send({
+        [apiResMsg ? 'Message' : 'Data']: apiResMsg || apiResData
+    })
+
+});
+
+app.all('/admin/about', async (req, res, next) => {
+
+    let apiResMsg, apiResData, statCode, resObj = {}, resMethod = 'render', renderPage;
+    let reqMethod = req.method;
+    try {
+        
+        switch(reqMethod){
+
+            case 'GET':
+
+                // Render about content
+                resObj.AboutBlurbs = await AppFn.getAboutBlurbs();
+                resObj.AppName = appName;
+                resObj.Content = 'About';
+                renderPage = 'Admin'
+
+            break;
+
+            case 'PATCH':
+
+                resMethod = 'send';
+
+            break;
+
+            default:
+                statCode = 405;
+                throw new Error(`Method ${req.method} isn't allowed.`)
+
+        }
+
+    } catch (e) {
+
+        console.log(e)
+
+        if(!statCode) statCode = 500;
+
+        apiResMsg = e.message
+    }
+
+    let resArgs = [];
+    if(apiResData){
+
+        resObj.Data = apiResData;
+        resArgs.push(resObj)
+
+    } else{
+
+        if(reqMethod === 'GET')
+            resArgs.push(renderPage, resObj)
+        else{
+            resObj.Message = apiResMsg;
+            resArgs.push(resObj)
+        }
+
+    }
+
+    console.log(resMethod, resArgs)
+    res.status(statCode || 200)[resMethod](...resArgs)
 
 })
 
+// Catch any requests for routes that don't exist
+app.get('*', async (req, res, next) => {
+    res.status(404).send('DOESN\'T EXIST CHAMMMMMPP!!!!!')
+});
 
 const server = app.listen(port, () => {
     console.log(`Api listening on ${port}...`)
@@ -752,18 +968,7 @@ const server = app.listen(port, () => {
 
 
 
-async function newStudentProjectLinkSet(projectIds, thisStudent) {
-    if (projectIds) {
-        console.log('Binding Student to Projects...');
-        if (projectIds.includes(','))
-            projectIds = projectIds.split(',');
-        else
-            projectIds = [projectIds];
 
-        await Promise.all(projectIds.map(projId => AppFn.addStudentProjectLink(thisStudent[0].id, projId)));
-
-    }
-}
 
 async function paginatedQuery(queryString){
 

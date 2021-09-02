@@ -9,12 +9,124 @@
     <script src="bs_scripts/bootstrap.min.js"></script>
     <link rel="stylesheet" href="bs_styles/bootstrap.min.css">
     <title><%= AppName %></title>
+    <script src="/bs_scripts/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/bs_styles/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment-with-locales.min.js" integrity="sha512-LGXaggshOkD/at6PFNcp2V2unf9LzFq6LE+sChH7ceMTDP0g2kn6Vxwgg7wkPP7AAtX+lmPqPdxB47A0Nz0cMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+    </style>
+    <link rel="stylesheet" href="/public/css/main.css">
+    <script  src="/public/js/util.js" type="module"></script>
+    <script src="/public/js/student.js" type="module"></script>
 </head>
 <body>
-    <% if(Content === 'Admin') { %>
-        <%- include('partials/Admin') %>
-    <% } else { %>
-        <%- include('partials/Error') %>
-    <% } %>
+    <nav class="navbar navbar-light bg-light admin-navbar">
+        <a class="navbar-brand" href="#">
+            <h2>TechColab</h2>
+        </a>
+        <h3 class="">Projects</h3>
+    </nav>
+    <main>
+        <div class="pane-outer">
+            <div class="pane">
+                <div class="search-filter-box">
+                    <h5 class="page-header" id="paneHeader">Search &amp; Filter</h5>
+                    <div class="filters hide">
+                        <div class="filter">
+                            <label>Project Name</label>
+                            <input type="text" name="ProjectName">
+                        </div>
+                        <div class="filter">
+                            <label>Project Name</label>
+                            <input type="text" name="ProjectName">
+                        </div><div class="filter">
+                            <label>Project Name</label>
+                            <input type="text" name="ProjectName">
+                        </div>
+                    </div>
+                </div>
+                <div class="frost hide"></div>
+                <div class="tile-container"></div>
+                <div class="floating-box hide">
+
+                </div>
+            </div>
+        </div>
+    </main>
 </body>
 </html>
+
+<!--
+<div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+                        <div class="tile">
+                            <h6 class="tile-header">Project Title</h6>
+                            <p class="tile-body">
+                                <div class="hero-image"></div>
+                                <div class="description">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</div>
+                            </p>    
+                        </div>
+
+-->

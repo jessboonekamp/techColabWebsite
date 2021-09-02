@@ -1,0 +1,39 @@
+<div class="addProjectForm project form-container">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="<%- modal ? 'modal-part' : 'form-part' %>">
+            <label for="title">Project Title</label>
+            <input type="text" name="title" id="">
+        </div>
+        <div class="d-f fd-row fg-2rem <%- modal ? 'modal-part' : 'form-part' %>">
+            <div class="d-f fd-col">
+                <label for="project_type">Project Type</label>
+                <select name="project_type" id="">
+                    <option value="capstone">Capstone</option>
+                    <option value="techcolab">TechColab</option>
+                </select>
+            </div>
+            <div class="d-f fd-col">
+                <label for="project_date">Project Date</label>
+                <input type="date" name="project_date" id="">
+            </div>
+        </div>
+        <div class="<%- modal ? 'modal-part' : 'form-part' %>">
+            <label for="description">Biography</label>
+            <!-- <input type="text" name="biography" id=""> -->
+            <textarea name="description" id="" cols="30" rows="10"></textarea>
+        </div>
+        <div class="col-100">
+            <label>Select Student(s)</label>
+            <input type="text" id="searchStudents" class="search-input" autocomplete="off" name="first_name" placeholder="Type 3 or more characters...">
+            <div class="p-rel">
+                <div class="dropdown searchResults"></div>
+            </div>
+            <div class="flex-box selectedItems" id="selectedStudents">
+            </div>
+        </div>
+        <%- include('../FileUpload', { elementId: 'projectFiles', multiple: true }) %>
+        <div class="col-100 d-f right <%= noSubmit ? 'hide' : '' %>">
+            <input type="submit" name="submit" id="">
+        </div>    
+    </form>
+</div>

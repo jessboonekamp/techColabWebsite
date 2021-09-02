@@ -1,30 +1,36 @@
-<div class="addStudentForm">
-    <form method="POST" enctype="multipart/form-data">
-        <div class="col-50 form-part">
-            <label for="first_name">First Name</label>
-            <input type="text" name="first_name" id="">
-        </div>
-        <div class="col-50 form-part">
-            <label for="last_name">Last Name</label>
-            <input type="text" name="last_name" id="">
-        </div>
-        <div class="col-100 form-part">
-            <label for="biography">Biography</label>
-            <!-- <input type="text" name="biography" id=""> -->
-            <textarea name="biography" id="" cols="30" rows="10"></textarea>
-        </div>
-        <div class="col-100 form-part">
-            <label>Select Project(s)</label>
-            <input type="text" id="searchProjects" autocomplete="off" name="title" placeholder="Type 3 or more characters...">
-            <div class="p-rel">
-                <div class="dropdown searchResults"></div>
+<div class="addStudentForm student <%- modal ? 'modal-container' : 'form-container' %>">
+    <form method="POST" enctype="multipart/form-data" class="d-f fd-row">
+        <div class="d-f fd-col col-50">
+            <div class="d-f fg-6">
+                <div class="col-50 <%- modal ? 'modal-part' : 'form-part' %>">
+                    <label for="first_name">First Name</label>
+                    <input type="text" name="first_name" id="" class="col-100">
+                </div>
+                <div class="col-50 <%- modal ? 'modal-part' : 'form-part' %>">
+                    <label for="last_name">Last Name</label>
+                    <input type="text" name="last_name" id="" class="col-100">
+                </div>
             </div>
-            <div class="flex-box selectedItems" id="selectedProjects">
+            <div class="col-100 <%- modal ? 'modal-part' : 'form-part' %>">
+                <label for="biography">Biography</label>
+                <!-- <input type="text" name="biography" id=""> -->
+                <textarea name="biography" id="" cols="30" rows="10" class="col-100"></textarea>
+            </div>
+            <div class="col-100">
+                <label class="col-100">Select Project(s)</label>
+                <input type="text" id="searchProjects" class="search-input col-100" autocomplete="off" name="title" placeholder="Type 3 or more characters...">
+                <div class="p-rel">
+                    <div class="dropdown searchResults"></div>
+                </div>
+                <div class="flex-box selectedItems" id="selectedProjects">
+                </div>
             </div>
         </div>
-        <%- include('../FileUpload', { elementId: 'studentFiles', multiple: false }) %>
-        <div class="col-100 d-f right <%= noSubmit ? 'hide' : '' %>">
-            <input type="submit" name="submit" id="">
-        </div>        
+        <div class="d-f fd-col col-50">
+            <%- include('../FileUpload', { elementId: 'studentFiles', multiple: false }) %>
+            <div class="col-100 d-f right <%= noSubmit ? 'hide' : '' %>">
+                <input type="submit" name="submit" id="">
+            </div>      
+        </div>  
     </form>
 </div>
