@@ -236,7 +236,12 @@ form > div{
 .result{
     padding: 5px;
     border-bottom: 1px solid #badfff;
+    display: flex;
+    flex-direction: row;
+    gap: 1em;
+    align-items: center;
 }
+
 .result:hover{ 
     background: #86959c;
     color: aliceblue;
@@ -327,17 +332,46 @@ form > div{
     width: -webkit-fill-available;
     filter: blur(4px);
     background: linear-gradient(#002e4f14, #00050aab, #000000c7);
+    z-index: 10;
 }
 .floating-box{
     position: absolute;
     top: 3.8rem;
     padding: 2.5rem;
+    padding-bottom: .8rem;
     width: -webkit-fill-available;
     height: calc(100% - 4rem);
     box-sizing: border-box;
     display: flex;
+    flex-direction: column;
+    z-index: 80;
+}
+.box-content{
+    display: flex;
     flex-direction: row;
+    flex: 1;
     gap: .8rem;
+}
+.box-footer{ 
+    margin: auto;
+    padding: .6rem;
+    display: flex;
+    gap: .5rem;
+}
+.box-footer button{
+    border-radius: 4px;
+    outline: none;
+    background: linear-gradient(to top, #06beb6, #48b1bf99, #4ca1af);
+    border: 1px solid transparent;
+    padding: 6px;
+    color: aliceblue;
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+.box-footer button:hover{
+    border: 1px solid #99fffe;
+    background: transparent;
+    transition: all .25s linear;
 }
 .tile-container{
     display: flex;
@@ -355,16 +389,20 @@ form > div{
     gap: .8rem;
     height: 100%;
     max-width: 50%;
+    width: -webkit-fill-available;
 } 
 .tile-bg{
     background-repeat: no-repeat!important;
     background-size: cover!important;
+    background-position: center!important;
 }
 .tile{
     width: calc((100% - 2rem) / 3);
     height: 50%;
     background: aliceblue;
+    background-position: center;
     border-radius: 6px;
+    position: relative;
 }
 .tile-column .tile{
     width: 100%; 
@@ -396,10 +434,21 @@ form > div{
     padding: 1em;
     height: -webkit-fill-available;
 }
+.p-title{
+    margin: 0.25em 0.25em 0.5em 0.25em;
+    text-align: center;
+    font-weight: 450;
+    font-size: xx-large;
+}
+.p-desc{
+    padding: 1em;
+    text-align: center;
+}
+.p-details{ text-align: center; }
 .project-student{
-    width: 5em;
+    width: 4em;
     border-radius: 50%;
-    height: 5em;
+    height: 4em;
     object-fit: cover;
 }
 .project-student-container{
@@ -417,17 +466,92 @@ form > div{
     gap: 1em;
     padding: 1em;
     overflow: auto;
+    position: relative;
+}
+.prof{
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+.prof img{ margin: 0 auto; }
+.prof-card{
+    z-index: 99;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    align-items: center;
+    /* max-width: 20vw; */
+    width: 200px;
+    height: 300px;
+    background: aliceblue;
+    border-radius: 6px; 
+    box-shadow: 2px 3px 4px 2px #8594a0;
+    padding: 1rem;
+    gap: .3rem;
+}
+.prof-card > img{
+    width: 80%;
+    height: 50%;
+    object-position: center;
+}
+.prof-card > .project-collaborator-name{
+    font-size: x-large;
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: 1px;
+}
+.prof-card > .project-collaborator-desc{
+    font-size: small;
+    text-align: center;
+    padding: 0 0.5em 0.5em 0.5em;
+}
+.linkedin-link{
+    margin-top: auto;
+    padding-bottom: 1em;
+}
+.linkedin-link > img{
+    width: 1.5rem;
+    height: 1.5rem;
+}
+.prof > .project-collaborator-name{
+    padding-top: 0.15em;
+    text-align: center;
+    font-size: small;
+    font-weight: 500;
+
 }
 .video-player{
     position: absolute;
-    top: 0;
+    top: 50px;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: calc(100% - 50px);
 }
 video{
     width: -webkit-fill-available;
-    height: -webkit-fill-available;
+}
+.video-player video{ height: 88%; }
+.video-bg{ background: black; }
+.media-control{
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+    padding: 4px 10px;
+    padding-bottom: .8rem;
+    display: flex;
+    gap: .4rem;
+    overflow: auto;
+}
+.thumb {
+    max-height: 4.8rem;
+    max-width: 4.8rem;
+    height: 4.8rem;
+    object-fit: cover;
+    margin: 0 auto;
+    border: .15rem solid transparent;
+}
+.thumb-active{
+    border-color: #cd6868;
 }
 .alert{
     position: absolute;
@@ -482,9 +606,14 @@ nav{
 
 }
 
-.scroll-box::-webkit-scrollbar{
+::-webkit-scrollbar{
     height: 4px;
-    background: #0081ff;
+    width: 10px;
+    background: #ffffff00;
+}
+::-webkit-scrollbar-thumb{
+    background-color: #b3b4b5;
+    border-radius: 2px;
 }
 
 .hide{ display: none!important; }

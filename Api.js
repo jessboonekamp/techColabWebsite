@@ -263,16 +263,14 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                     statCode = 400;
                     throw new Error(`Bad request. No payload specified`);
                 }
-
-                let { first_name: firstName, last_name: lastName, biography } = body
-
+                let { first_name: firstName, last_name: lastName, biography: biography, linkedin: linkedin } = body;
                 // Insert First_name, last_name validation
-                async function newStudent(firstName, lastName, biography){
+                async function newStudent(firstName, lastName, biography, linkedin){
                     let thisStudent = await AppFn.getStudent(null, firstName, lastName);
 
                     if(!thisStudent){
                         console.log('Creating Student')
-                        await AppFn.createStudent(firstName,lastName, biography);
+                        await AppFn.createStudent(firstName,lastName, biography, linkedin);
                         return await AppFn.getStudent(null, firstName, lastName)
 
                     }
@@ -281,9 +279,23 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 
                 }
                 
-                let thisStudent = await newStudent(firstName, lastName, biography);
+                let thisStudent = await newStudent(firstName, lastName, biography, linkedin);
 
                 if(thisStudent.length && uploadedFiles.length){
+
+                    let heroImage = req.body?.heroImage;
+                    if(heroImage){
+                        uploadedFiles = uploadedFiles.map(f => {
+
+                            if(f.name === heroImage){
+                                f.is_hero = heroImage
+                            }
+
+                            return f
+                        })
+                        
+                    }
+
                     await AppFn.updateDbFileStore(thisStudent.id, uploadedFiles, 'student')
                 }
 
@@ -344,10 +356,25 @@ app.all("/admin/addProject", async(req, res, next) => {
                 }
                 
                 let projectID = await newProject(title, project_date, project_type, description);
-    
+                
+                console.log(346, body)
+
                 let uploadedFiles = await AppFn.uploadFiles(req, 'project', __dirname);
     
                 if(!uploadedFiles.length) throw new Error(`Files failed to be uploaded`)
+
+                let heroImage = req.body?.heroImage;
+                if(heroImage){
+                    uploadedFiles = uploadedFiles.map(f => {
+
+                        if(f.name === heroImage){
+                            f.is_hero = heroImage
+                        }
+
+                        return f
+                    })
+                }
+
                 await AppFn.updateDbFileStore(projectID, uploadedFiles, 'project');
     
                 await AppFn.newStudentProjectLinkSet(req.body.StudentIDs, projectID, 'project');
@@ -377,6 +404,82 @@ app.all("/admin/addProject", async(req, res, next) => {
 });
 
 ///admin
+app.get("/admin/:entityType/search/:id*?", async (req, res, next) => {
+
+    let statCode, apiResMsg, apiResData;
+
+    try {
+
+        let entityType = req.params.entityType;
+        if(!entityType || !['student','project','media'].includes(entityType.toLowerCase())){
+            statCode = 400;
+            throw new Error(`Bad request. Invalid EntityType specified.`)
+        }
+
+        let query = req.query;
+        let queryKeys = Object.keys(query);
+        if(!queryKeys.length){
+            statCode = 400;
+            throw new Error(`Bad request. No query parameters specified..`)
+        }
+
+        let searchProps = ['id'], useFn, objId = query?.id;
+        let fnArgs = [];
+        switch(entityType){
+
+            case 'project':
+
+                if(!objId){
+                    searchProps = ['title'];
+                    useFn = 'searchEntity';
+                    fnArgs.push(query, entityType, 'project');
+                } else{
+                    query = objId;   
+                    fnArgs.push(query);
+                    useFn = 'getProjectProfile';
+                }
+
+            break;
+            case 'student':
+                
+                if(!objId){
+                    searchProps = ['first_name', 'last_name'];
+                    useFn = 'searchEntity';
+                    fnArgs.push(query, entityType);;
+                } else{
+                    query = objId; 
+                    fnArgs.push(query);
+                    useFn = 'getStudentProfile';
+                }
+                               
+
+            break
+
+        }
+
+        if(queryKeys.find(k => !searchProps.includes(k))){
+            statCode = 400;
+            throw new Error(`Bad request. One or more of: ${queryKeys.join(', ')} doesn't exist on EntityType ${entityType}.`)
+        }
+
+        console.log(fnArgs)
+        apiResData = await AppFn[useFn](...fnArgs)
+        
+
+    } catch (e) {
+        
+        console.log(e)
+
+        if(!statCode) statCode = 500;
+
+        apiResMsg = e.message
+
+    }
+
+    res.status(statCode || 200).send(apiResData ? apiResData : { Message: apiResMsg })
+
+});
+
 app.get("/:entityType/search/:id*?", async (req, res, next) => {
 
     let statCode, apiResMsg, apiResData;
@@ -563,17 +666,34 @@ app.all("/admin/projects/:projectId*?", async(req, res, next) => {
                 }
     
                 await AppFn.newStudentProjectLinkSet(studentIds, projectId, 'project')
-    
-                await AppFn.patchProject(projectId, updateObj)
-    
+        
                 let uploadedFiles
                 if(req.files){
 
                     uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
                     if(uploadedFiles.length){
+
+                        let heroImage = req.body?.heroImage;
+                        if(heroImage){
+
+                            uploadedFiles = uploadedFiles.map(f => {
+                
+                                if(f.name === heroImage) f.is_hero = true;
+                
+                                return f
+
+                            });                            
+
+                        }
+
+
                         uploadedFiles = await AppFn.updateDbFileStore(projectId, uploadedFiles, 'project')
                     }
                 }
+
+                delete updateObj?.heroImage
+
+                await AppFn.patchProject(projectId, updateObj)
 
                 return res.send({
                     Message: 'Project updated!'

@@ -2,12 +2,22 @@
 <div class="card-container">
     <% for(var i = 0; i < Projects.length; i++){%>
         <% let s = Projects[i] %>
-        <% console.log(s) %>
+        <% console.log(4, s) %>
         <div class="card">
             <div class="card-body student-card-body">
                 <div>
-                    <% if(s?.media[0]?.path) { %>
-                        <img class="student-image" src="<%= s.media[0] ? s.media[0].path : '' %>" alt="">
+                    <% if(s?.media[0]) { %>
+                        <% let heroStatus = false %>
+                        <% for(var j = 0; j < s.media.length; j++){ %>
+                            <% if(s?.media[j]?.is_hero){ %>
+                                <img class="student-image" src="<%= s.media[j] ? s.media[j].path : '' %>" alt="">
+                                <% heroStatus = true %>
+                            <% } %>
+                        <% } %>
+                        <% if(!heroStatus){ %>
+                            <img class="student-image" src="<%= s.media[0] ? s.media[0].path : '' %>" alt="">
+                        <% } %>
+
                     <% } else { %>
                         <div class="student-image student-image-none"></div>
                     <% } %>

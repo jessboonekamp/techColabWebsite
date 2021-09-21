@@ -1,3 +1,4 @@
+import { initializeNavbar } from './navbar.js';
 import { bindFn } from './util.js';
 
 window.addEventListener('load', async e => {
@@ -21,6 +22,8 @@ window.addEventListener('load', async e => {
     bindFn(document.getElementById('projectFiles'), addFileToList, [document.getElementsByClassName('attachedFiles')[0]], 'change');
 
     bindFn(document.getElementById('searchStudents'), searchEntity, ['student'], 'input');
+    
+    initializeNavbar()
 
 });
 
@@ -130,21 +133,7 @@ async function uploadFiles(fileEl, entityType, objectId) {
         let form = new FormData(document.getElementsByTagName('form')[0]);
         ['biography','last_name','first_name'].forEach(p => form.delete(p));
         
-        let heroImage = $('.cbx input:checked');
-        if(heroImage.length){
-
-            let imageName = heroImage.parent().prev().children().attr('data-imagename');
-
-            let files = fileEl.files;
-    
-            for(let i = 0; i < files.length; i ++){
-                let f = files[i];
-                if(f.name === imageName) {
-                    form.set('heroImage', f.name)
-                }
-            }
-             
-        }       
+        form = setHeroImageSelection(form);
 
         await fetch(`/${entityType}/${objectId}/addFiles`, { method: 'POST', body: form });
 
@@ -163,9 +152,7 @@ async function deleteObjectLink(objectId, entityType){
     try {
 
         let apiRes = await fetch(`/admin/${entityType}/link/${objectId}`, { method: 'DELETE' });
-
-        if(apiRes.status = 204) return;
-
+        if(apiRes.status === 204) return;
         apiRes = await apiRes.json();
         
         if(apiRes?.Message) throw apiRes.Message;
@@ -484,7 +471,8 @@ async function searchEntity(e, entityType){
 }
 
 function addSelectOption(text, entityType, dataAttrVal, isCommitted){
-
+    let noStudentPlaceholder = $('.noStudent');
+    noStudentPlaceholder ? noStudentPlaceholder.remove() : '';
     let o = document.createElement('div');
     o.classList.add('selected-opt');
 
@@ -577,14 +565,18 @@ async function submitForm(e){
 
         getLinkSelection(form, useEntityType);
 
+        form = setHeroImageSelection(form);
+
         //let apiRes = await fetch(window.location.href, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: form })
         let apiRes = await fetch(window.location.href, { method: 'POST', body: form })
+        console.log(570, apiRes)
 
         status = apiRes.status;
 
         if(status = 200){
             apiRes = await apiRes
             console.log(apiRes)
+
         }
 
 
@@ -595,6 +587,23 @@ async function submitForm(e){
         newNotificationMessage(e.message, 'error')
     }
 
+}
+
+function setHeroImageSelection(form) {
+    let fileEl = $(`input[type="file"]`)[0];
+    let heroImage = $('.cbx.checked');
+    let imageName = heroImage.prev().children().attr('data-imagename');
+    if (heroImage && fileEl.files.length) {
+        let files = fileEl.files;
+        for (let i = 0; i < files.length; i++) {
+            let f = files[i];
+            if (f.name === imageName) {
+                form.set('heroImage', f.name);
+            }
+        }
+    }
+
+    return form
 }
 
 function getLinkSelection(form, entityType) {
@@ -794,7 +803,7 @@ async function getMedia(id, entityType){
 async function getStudent(id){
     try {
         
-        let apiRes = await fetch(`/admin/student/search?id=${id}`);
+        let apiRes = await fetch(`/student/search?id=${id}`);
 
         return await apiRes.json()
 
@@ -807,7 +816,7 @@ async function getStudent(id){
 async function getProject(id){
     try {
         
-        let apiRes = await fetch(`/admin/project/search?id=${id}`);
+        let apiRes = await fetch(`/project/search?id=${id}`);
 
         return await apiRes.json()
 

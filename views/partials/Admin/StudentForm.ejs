@@ -16,6 +16,11 @@
                 <!-- <input type="text" name="biography" id=""> -->
                 <textarea name="biography" id="" cols="30" rows="10" class="col-100"></textarea>
             </div>
+            <div class="col-100 <%- modal ? 'modal-part' : 'form-part' %>">
+                <label for="linkedin">LinkedIn</label>
+                <!-- <input type="text" name="biography" id=""> -->
+                <input type="text" name="linkedin" id="" class="col-100">
+            </div>
             <div class="col-100">
                 <label class="col-100">Select Project(s)</label>
                 <input type="text" id="searchProjects" class="search-input col-100" autocomplete="off" name="title" placeholder="Type 3 or more characters...">

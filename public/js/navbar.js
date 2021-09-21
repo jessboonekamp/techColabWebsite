@@ -1,9 +1,22 @@
-window.addEventListener('load', initializeNavbar);
 
-function initializeNavbar(){
+
+$('.tile-container').on('scroll', function() {
+    let e = $('.tile-container');
+    let p = e.scrollTop();
+    let h = e.height();
+    let o = e.outerHeight();
+
+
+
+    e.prop('scrollHeight')
+    console.log(p, h, e.prop('scrollHeight'), toPx(2.7))
+
+});
+
+
+export function initializeNavbar(){
 
     let navList = document.getElementById('navigation');
-    console.log(navList.childNodes)
     let submenus = convertNodeListToArray(document.getElementsByClassName('submenu'));
     convertNodeListToArray(navList.children).forEach(listItem => {
 
@@ -11,7 +24,6 @@ function initializeNavbar(){
         let navBtn = listItem.children[0];
         
         navBtn.addEventListener('click', e => {
-
             let submenu = e.currentTarget.nextElementSibling;
             if(submenu){
                 

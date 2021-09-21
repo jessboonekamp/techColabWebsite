@@ -184,9 +184,7 @@ module.exports = function(dbPoolConnection) {
 
             let paginationStr = ` LIMIT ${maxCount} OFFSET ${start};`;
 
-            console.log(187, query)
-
-            query = Object.keys(query).length ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : '';
+            query = query && Object.keys(query).length ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : '';
 
             let resultSet = {};
 
@@ -505,9 +503,9 @@ module.exports = function(dbPoolConnection) {
             }
 
         },
-        createStudent: async (firstName,lastName, biography) => {
+        createStudent: async (firstName,lastName, biography, linkedin) => {
             return await new Promise((resolve, reject) => {
-                let sqlQuery = `INSERT into student ( first_name, last_name, biography) VALUES ('${firstName}', '${lastName}', '${biography}')`;
+                let sqlQuery = `INSERT into student ( first_name, last_name, biography, linkedin) VALUES ('${firstName}', '${lastName}', '${biography}', '${linkedin}')`;
                 console.log('inserting')
                 dbPoolConnection.query(sqlQuery, function(err, result){
 
