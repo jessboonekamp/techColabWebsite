@@ -76,19 +76,26 @@ async function searchStudents(e, start, end, page, totalRows, append, signal){
             if(linkedin){
                 linkedin = "//" + (linkedin.replace('https://', '').replace('www.', ''))
             }
-            let studentCard =`<div class="student-list-card" style="">
-                                <span class="hide">${id}</span>
-                                <div class="student-list-background" style="background-image: url(${profilePhoto?.path})">
-                                    <div class="student-list-mask"></div>
-                                    <span class="student-list-name">
-                                        ${first_name} ${last_name}
-                                    </span>
-                                </div>
-                                <span class="student-list-desc">${biography}</span>`
-            linkedin ? studentCard += `<a class="linkedin-link" href="${linkedin}" target="_blank" title="April's LinkedIn">
-                            <img src="/public/images/icons/${link}.png">
-                        </a>` : ``;
-            studentCard +=`</div>`
+            let studentCard = ``;
+            linkedin ? studentCard = `<a class="student-list-card" href="${linkedin}" target="_blank">` : ``;
+            studentCard += linkedin ? `<div class="w-100">` : ` <div class="student-list-card" style="">`;
+            studentCard+=` <span class="hide">${id}</span>
+                        <div class="student-list-background" style="background-image: url(${profilePhoto?.path})">
+                            <div class="student-list-mask"></div>
+                            <span class="student-list-name">
+                                ${first_name} ${last_name}
+                            </span>
+                            <div class="desc-container">
+                                <span class="student-list-desc">${biography}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            studentCard += linkedin ? `</a>` : ``;
+
+            // linkedin ? studentCard += `<a class="linkedin-link" href="${linkedin}" target="_blank" title="April's LinkedIn">
+            //                 <img src="/public/images/icons/${link}.png">
+            //             </a>` : ``;
+            // studentCard +=`</div>`
             
             container.append(studentCard).fadeIn();
         });
