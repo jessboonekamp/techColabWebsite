@@ -1,0 +1,27 @@
+<div class="search-filter-box">
+    <h5 class="page-header" id="paneHeader">Search &amp; Filter</h5>
+    <div class="filters hide">
+        <form action="/projects/search" class="form-bar fd-row" method="GET">
+            <% SearchFormFields.forEach(f => { %>
+                <div class="filter" title="Search using a specified criteria">
+                <label class="filter-label" for="<%= f.fieldName %>"><%= f.displayTitle %></label>
+                <% if(f.type == 'select'){ %>
+                    <select id="" name="<%= f.fieldName %>">
+                        <% f.options.forEach(o => { %>
+                            <option value="<%= o %>"><%= o %></option>
+                        <% }) %>
+                    </select>
+                <% }else { %>
+                    <span class="p-rel">
+                        <input type="<%= f.type || 'text' %>" name="<%= f.fieldName %>" <%- f?.pattern ? `pattern=${f.pattern}` : '' %>>
+                    </span>
+                <% } %>
+                </div>
+            <% }) %>
+            <span class="d-f custom-btn icon-btn">
+                <img src="/public/images/icons/search.svg" alt="Search">
+                <input type="submit" value="Search">
+            </span>
+        </form>
+    </div>
+</div>

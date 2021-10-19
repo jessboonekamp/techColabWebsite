@@ -1,0 +1,70 @@
+<footer>
+    <div>
+        <img src="/public/images/icons/TechColabLogo.png" alt="Company logo">
+    </div>
+    <div>
+        <ul class="link-list">
+            <li>
+                <a href="" class="soc-media-link">
+                    <img src="/public/images/icons/facebook.png" alt="" class="icon">
+                    <span>Facebook</span>
+                </a>
+            </li>
+            <li>
+                <a href="" class="soc-media-link">
+                    <img src="/public/images/icons/instagram.png" alt="" class="icon">
+                    <span>Instagram</span>
+                </a>
+            </li>
+            <li>
+                <a href="" class="soc-media-link">
+                    <img src="/public/images/icons/linkedin.png" alt="" class="icon">
+                    <span>LinkedIn</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div>
+        <ul class="link-list">
+            <li>
+                <a href="" class="soc-media-link">
+                    <span>Contact us</span>
+                </a>
+            </li>
+            <li>
+                <a href="" class="soc-media-link">
+                    <span>Ara, Institute of Canterbury</span>
+                </a>
+            </li>
+            <li>
+                <a href="" class="soc-media-link">
+                    <span>Terms & Conditions</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div>
+        <div id="map"></div>
+    </div>
+</footer>
+<script>
+    document.addEventListener('pageshow', e =>{
+        initMap()
+
+
+    })
+    function initMap() {
+        const location = {lat: -43.537246868434494, lng: 172.64309151061005}
+        const map = new google.maps.Map(document.getElementById('map'), {
+          center: location,
+          zoom: 15
+        })
+
+        new google.maps.Marker({
+            position: location,
+            map: map,
+            title: "Tech Colab Office"
+        })
+    }
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<%= ApiKeys.maps.key %>&callback=initMap&v=weekly" defer></script>

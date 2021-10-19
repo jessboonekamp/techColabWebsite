@@ -9,7 +9,9 @@ window.addEventListener('load', async e => {
 
     bindFn(document.getElementsByClassName('editStudent'), editStudent);
 
-    bindFn(document.getElementsByClassName('editProject'), editProject)
+    bindFn(document.getElementsByClassName('editProject'), editProject);
+
+    bindFn(document.getElementsByClassName('editAbout'), editAbout)
 
     bindFn(document.getElementById('searchProjects'), searchEntity, ['project'] ,'input');
 
@@ -21,11 +23,35 @@ window.addEventListener('load', async e => {
 
     bindFn(document.getElementById('projectFiles'), addFileToList, [document.getElementsByClassName('attachedFiles')[0]], 'change');
 
+    bindFn(document.getElementById('aboutFiles'), addFileToList, [document.getElementsByClassName('attachedFiles')[0]], 'change');
+
     bindFn(document.getElementById('searchStudents'), searchEntity, ['student'], 'input');
-    
+
     initializeNavbar()
 
+
+    initialize()
+
+
+
 });
+
+async function initialize(){
+
+    // let l = window.location.href;
+    // switch(true){
+    //     case l.endsWith('about'):
+
+    //         let media = await fetch(`/admin/`)
+            
+            
+
+    //     break;
+    // }
+
+    // Initialize delete and hero click events
+
+}
 
 function initCheckboxEvents(callingFn) {
 
@@ -393,6 +419,56 @@ async function editProject(e, form, projectId, saveBtn){
 
 }
 
+async function editAbout(e){
+    let ct = e.currentTarget
+    let form = new FormData(document.getElementsByTagName('form')[0]);
+    if(form){
+        
+
+        if(form.get('Files')){
+
+            let fileEl = document.getElementById('aboutFiles');
+
+
+            if(fileEl.files.length) {
+
+                let uploadForm = await uploadFiles(fileEl, 'about', 1);
+
+                fileEl.value = null;
+
+                form.set('heroImage', uploadForm.get('heroImage'))
+
+            }
+
+            form.delete('Files')
+        }
+    
+        let apiRes = await fetch(window.location.href, { method: 'POST', body: form});
+
+        let status = apiRes.status;
+        apiRes = await apiRes.json();
+
+        console.log(apiRes)
+
+        newNotificationMessage(apiRes.Message, status == 200 ? 'success' : 'error')
+    }
+
+    form = document.getElementsByTagName('form')[0];
+
+    form = new FormData(form);
+
+    let about = await fetch(`/admin/about/content`)
+
+    let aboutMedia = await getMedia(ct.getAttribute('data-aboutid'), 'about');
+    $('.attachedFiles').html('');
+    let commitedFileList =  document.getElementsByClassName('existingFiles')[0];
+    aboutMedia.length ? await addFileToList(null, commitedFileList, aboutMedia) :  commitedFileList.innerHTML = '';
+
+
+    console.log(450, aboutMedia)
+
+}
+
 async function searchEntity(e, entityType){
 
     try {
@@ -560,7 +636,9 @@ async function submitForm(e){
     try {
         
         let useEntityType = e.target.parentElement.classList.contains('student') ? 'project' : 'student';
-        console.log(useEntityType)
+        
+        if(useEntityType === 'about') return;
+
         let form = new FormData(e.target); //formToJSON(e.target);
 
         getLinkSelection(form, useEntityType);
@@ -568,19 +646,8 @@ async function submitForm(e){
         form = setHeroImageSelection(form);
 
         //let apiRes = await fetch(window.location.href, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: form })
-        let apiRes = await fetch(window.location.href, { method: 'POST', body: form })
-        console.log(570, apiRes)
+        await fetch(window.location.href, { method: 'POST', body: form })
 
-        status = apiRes.status;
-
-        if(status = 200){
-            apiRes = await apiRes
-            console.log(apiRes)
-
-        }
-
-
-  
 
     } catch (e) {
         console.log(e)
@@ -588,6 +655,8 @@ async function submitForm(e){
     }
 
 }
+
+
 
 function setHeroImageSelection(form) {
     let fileEl = $(`input[type="file"]`)[0];

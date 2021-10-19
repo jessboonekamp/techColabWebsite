@@ -31,7 +31,7 @@
             <div class="flex-box selectedItems" id="selectedStudents">
             </div>
         </div>
-        <%- include('../FileUpload', { elementId: 'projectFiles', multiple: true }) %>
+        <%- include('../FileUpload', { elementId: 'projectFiles', multiple: true, imageOnly: false, files: null }) %>
         <div class="col-100 d-f right <%= noSubmit ? 'hide' : '' %>">
             <input type="submit" name="submit" id="">
         </div>    

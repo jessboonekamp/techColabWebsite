@@ -1,0 +1,93 @@
+<div class="projects-demo">
+    <!-- Create a horizontal scroll of recent projects -->
+</div>
+<% console.log(AboutBlurbs) %>
+<div class="about-section d-f fd-col">
+    <section class="d-f">
+        <% const thisBlurb = AboutBlurbs[0] %>
+        <div class="section left-pane" style="background-image: url(<%= thisBlurb.files[0].path %>)">
+            <div class="backdrop"></div>
+            <h2><%= thisBlurb.header %></h2>
+        </div>
+        <div class="section right-pane text-pane">
+            <div>
+                <% const linkKeywords = {
+                    projects: '/projects',
+                    students: '/students'
+                } %>
+                <% const emphasizeKeywords = ['Tech', 'Colab'] %>
+                <% let str = [] %>
+                <% thisBlurb.blurb_text.split(' ').forEach(word => { %>
+    
+                    <% if(emphasizeKeywords.includes(word)){ %>
+                        <% str.push(`<em>${word}</em>`) %>
+                    <% } else if(linkKeywords[word.toLowerCase()]){ %>
+                        <% str.push(`<a href="${linkKeywords[word.toLowerCase()]}">${word}</a>`) %>
+                    <% } else str.push(word) %>
+    
+                <% }) %>
+                <%- str.join(' ') %>
+            </div>
+            <div class="home-directions-box">
+                <a class="home-directions-link" href="/Projects">
+                    See some of our successful projects
+                </a>
+                <a class="home-directions-link" href="/Students">
+                    See the students that make this happen
+                </a>
+            </div>
+        </div>      
+    </section>
+    <section class="d-f">
+        <div class="section left-pane text-pane center-vh">
+            <h3 class="head">What we offer</h3>
+            <div class="d-f list-container-grp">
+                <div class="d-f fd-col list-container">
+                    <h4>Services</h4>
+                    <ul>
+                        <li>Website development</li>
+                        <li>App development</li>
+                        <li>Search engine optimisation</li>
+                        <li>Inventory control</li>
+                        <li>Business analytics</li>
+                        <li>System integration</li>
+                        <li>Migration to Office 365</li>
+                        <li>Going serverless</li>
+                        <li>Marketing and sales</li>
+                        <li>Project management</li>
+                    </ul>
+                </div>
+                <div class="d-f fd-col list-container">
+                    <h4>Training</h4>
+                    <ul id='list-two'>
+                        <li>Windows 10</li>
+                        <li>Microsoft suites</li>
+                        <li>Google suites</li>
+                        <li>Photo editing</li>
+                        <li>Business writing</li>
+                        <li>Social media</li>
+                        <li>Xero</li>
+                        <li>MYOB</li>
+                        <li>Customer service</li>
+                        <li>Effective leadership</li>
+                        <li>Conflict management</li>
+                    </ul>  
+                </div>
+            </div>
+        </div>
+        <div class="section right-pane">
+            <%- include('../ServiceSVG') %>
+        
+        </div>      
+    </section>
+    <section class="d-f">
+        <div class="section left-pane">
+            <%- include('../ContactSVG') %>
+        </div>
+        <div class="section right-pane text-pane">
+           <%- include('ContactForm') %>
+        </div>
+    </section>
+</div>
+
+<a href="https://storyset.com/technology" class="hide">Technology illustrations by Storyset</a>

@@ -1,14 +1,21 @@
-const { query } = require('express');
-const { resolve } = require('path');
-
 module.exports = function(dbPoolConnection) {
 
     if(!dbPoolConnection) throw new Error(`Cannot initialize without a database connection.`);
 
-    const bcrypt = require('bcrypt');
+    const crypto = require('crypto');
     const path = require('path');
     const fs = require('fs').promises;
-    const maxCount = 10;
+    const maxCount = 6;
+
+    function castKeyAs(key){
+        const castings = {
+            project_date: 'YEAR'
+        }
+
+        if(castings[key]) return `${castings[key]}(${key})`
+ 
+        return key
+    }
 
     // Utility Functions
     function validateAsId(value){
@@ -19,17 +26,15 @@ module.exports = function(dbPoolConnection) {
         return ['student','project','media'].includes(string.toLowerCase())
     }
 
-    function newDBQueryFilterString(object, type, operator){
+    function newDBQueryFilterString(object, type, operator, ){
 
         let delimiter = ' AND ';
         if(type === 'update') delimiter = ', ';
 
         if(operator === 'like') return Object.keys(object).map(k => `${k} LIKE '%${object[k]}%'`).join(delimiter) 
 
-        return Object.keys(object).map(k => `${k} = '${object[k]}'`).join(delimiter)
+        return Object.keys(object).map(k => `${castKeyAs(k)} = '${object[k]}'`).join(delimiter)
     }
-
-
 
     
     async function newDBQuery(statement, conditionObj){
@@ -168,10 +173,29 @@ module.exports = function(dbPoolConnection) {
 
     return {
 
+        encrypt: function (text){
+            const iv = crypto.randomBytes(16)
+            const key = crypto.randomBytes(32);
+            let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), iv);
+            let encrypted = cipher.update(text);
+            encrypted = Buffer.concat([encrypted, cipher.final()]);
+            return encrypted.toString('hex') + ':' + iv.toString('hex') + '=' + key.toString('hex');
+            //returns encryptedData:iv=key
+        },        
+        decrypt: function(text){
+            let iv = Buffer.from((text.split(':')[1]).split('=')[0], 'hex')//will return iv;
+            let enKey = Buffer.from(text.split('=')[1], 'hex')//will return key;
+            let encryptedText = Buffer.from(text.split(':')[0], 'hex');//returns encrypted Data
+            let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(enKey), iv);
+            let decrypted = decipher.update(encryptedText);
+            decrypted = Buffer.concat([decrypted, decipher.final()]);
+            return decrypted.toString();
+            //returns decryptedData
+        },
         encryptString: async function (string){
             return await bcrypt.hash(string, await bcrypt.genSalt(10))   
         },
-        decryptString: async function (string, encryptedString){
+        compareEncString: async function (string, encryptedString){
             return await bcrypt.compare(string, encryptedString)
         },
         searchEntity: async function (query, entityType, mapToContext){
@@ -182,6 +206,8 @@ module.exports = function(dbPoolConnection) {
 
             let { start, end, page } = pagination.pagination;
 
+            console.log(pagination)
+
             let paginationStr = ` LIMIT ${maxCount} OFFSET ${start};`;
 
             query = query && Object.keys(query).length ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : '';
@@ -190,26 +216,26 @@ module.exports = function(dbPoolConnection) {
 
             let searchResults = await new Promise((resolve, reject) => {
 
-
                 let sqlQuery = `
                     SELECT * FROM ${entityType} ${query} ${paginationStr}
-                    SELECT COUNT(*) FROM ${entityType} ${query} ${paginationStr}
+                    SELECT COUNT(*) FROM ${entityType} ${query}
                 `;
-                console.log(sqlQuery)
+
                 dbPoolConnection.query(sqlQuery, function(err, result){
 
                     if(err) return reject(err)
 
                     return resolve(result)
                 })
+
             });
 
-            // console.log(204, searchResults)
+            console.log(204, searchResults)
 
-            resultSet.page = page;
-            resultSet.start = start;
-            resultSet.end = end;
-            resultSet.totalRows = searchResults[1][0]['COUNT(*)'];
+            resultSet.page = Number(page || 1);
+            resultSet.start = Number(start || 1);
+            resultSet.end = Number(end || 10);
+            resultSet.totalRows = Number(searchResults[1].length ? searchResults[1][0]['COUNT(*)'] : 0);
 
             if(typeof mapToContext !== 'string') {
                 resultSet.Data = searchResults[0];
@@ -245,6 +271,33 @@ module.exports = function(dbPoolConnection) {
                     )
 
                 break;
+
+                case 'student':
+
+                    resultSet.Data = await Promise.all(
+
+                        searchResults[0].map(async obj => {
+                        
+                            let prof = await this.getStudentProfile(obj.id, obj); 
+        
+                            prof.projects = await Promise.all(prof.projects.map(
+                                async project => {
+
+                                    let projectPhoto = (await getMedia(project.id, 'project'))[0];
+
+                                    return {
+                                        ...project,
+                                        projectPhoto: projectPhoto
+                                    }
+                                    
+                                })
+                            ); 
+        
+                            return prof
+        
+                        })
+                    )
+                break;     
 
                 default:
                     throw new Error(`Invalid context mapping provided ${mapToContext}.`)
@@ -282,50 +335,37 @@ module.exports = function(dbPoolConnection) {
         uploadFiles: async function (req, entityType, defaultPath) {
     
             try {
-                
-                let targetSaveFolder = 'files/'.concat(entityType === 'student' ? 'student_media' : 'project_media');
-                let uploadFiles = [];
+
+                let targetSaveFolder = `files/${entityType}_media`;
                 if (req.files?.Files) {
-                    if (Array.isArray(req.files.Files)) {
-                        let files = req.files.Files;
-                        uploadFiles = await Promise.all(files.map(async file => {
-                            let fileName;
-                            try {
-            
-                                fileName = file.name;
-            
-                                let fileAsBuffer = new Buffer.from(file.data, file.encoding);
-            
-                                let filePath = path.join(defaultPath, targetSaveFolder, fileName);
-            
-                                await fs.writeFile(filePath, fileAsBuffer);
+
+                    if(!Array.isArray(req.files.Files)) req.files.Files = [ req.files.Files ];
+
+                    let files = req.files.Files;     
+                    return await Promise.all(files.map(async file => {
+
+                        let fileName;
+                        try {
         
-                                return {
-                                    name: fileName,
-                                    filePath: filePath
-                                }            
-            
-                            } catch (e) {
-                                throw new Error(`Failed to upload file ${fileName}. Error: ${e.message}`);
-                            }
-                        }));
-            
-                    } else {
-                        console.log('Handling single file...');
-            
-                        let file = req.files.Files;
-                        let fileName = file.name;
-                        let filePath = path.join(defaultPath, targetSaveFolder, fileName);
-                        let fileAsBuffer = new Buffer.from(file.data, file.encoding);
-                        await fs.writeFile(filePath, fileAsBuffer);
-                        uploadFiles.push({
-                            name: fileName,
-                            filePath: filePath
-                        });
-                    }
+                            fileName = file.name;
+        
+                            let filePath = path.join(defaultPath, targetSaveFolder, fileName);
+        
+                            await fs.writeFile(filePath, file.data);
+    
+                            return {
+                                name: fileName,
+                                filePath: filePath
+                            }            
+        
+                        } catch (e) {
+                            throw new Error(`Failed to upload file ${fileName}. Error: ${e.message}`);
+                        }
+
+                    }));
+
                 }
-        
-                return uploadFiles
+
 
             } catch (e) {
                 console.log(e)
@@ -422,7 +462,7 @@ module.exports = function(dbPoolConnection) {
 
                 let o = {
                     ...student,
-                    ...profilePhoto,
+                    profilePhoto: profilePhoto,
                     projects: projects
                 }
 
@@ -573,6 +613,24 @@ module.exports = function(dbPoolConnection) {
             }
 
         },
+        patchAbout: async function (updateObj){
+
+            try {
+                
+                 return await new Promise((resolve, reject) => {
+                    dbPoolConnection.query(`UPDATE about SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = 1`, function (err, result){
+                        if(err) return reject(err);
+                        return resolve(result);
+                    })
+                })
+
+            } catch (e) {
+                
+                throw new Error(`AppFn.PatchAbout failed to Patch About. Error ${e.message}`)
+
+            }
+
+        },
         getStudentProject: getStudentProject,
         addStudentProjectLink: addStudentProjectLink,
         deleteStudentProjectLink: async linkId => {
@@ -625,9 +683,17 @@ module.exports = function(dbPoolConnection) {
         getAboutBlurbs: async () => {
 
             try {
-               
-                return await newDBQuery(`SELECT * FROM about`)
+
+                let about = await newDBQuery(` SELECT * FROM about`)
+
+                return (
+                    await Promise.allSettled(about.map(async a => {
+                        a.files =  await getMedia(a.id, 'about')
+                        return a
+                    }))
+                ).map(a => a.value)
                 
+
             } catch (e) {
                 throw new Error(`GetAboutBlurbs failed. Error: ${e.message}.`)
             }

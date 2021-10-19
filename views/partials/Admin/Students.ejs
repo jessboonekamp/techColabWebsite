@@ -6,8 +6,9 @@
         <div class="card">
             <div class="card-body student-card-body">
                 <div>
-                    <% if(s?.path) { %>
-                        <img class="student-image" src="<%= s.path %>" alt="">
+                    <% let profilePhoto = s.profilePhoto %>
+                    <% if(profilePhoto?.path) { %>
+                        <img class="student-image" src="<%= profilePhoto.path %>" alt="">
                     <% } else { %>
                         <div class="student-image student-image-none"></div>
                     <% } %>

@@ -1,0 +1,25 @@
+
+<% if(AboutBlurbs.length) { %>
+    <% console.log(AboutBlurbs) %>
+    <% let blurb = AboutBlurbs[0]; %>
+    <div class=" about">
+        <form method="POST" enctype="multipart/form-data" class="d-f fd-row">
+            <div class="d-f fd-col col-50">
+                <div class="col-100">
+                    <label for="header">Header</label>
+                    <input type="text" name="header" id="" class="col-100" value='<%= blurb.header %>' >
+                <div class="col-100">
+                    <label for="blurb_text">Blurb</label>
+                    <!-- <input type="text" name="biography" id=""> -->
+                    <textarea name="blurb_text" id="" cols="30" rows="10" class="col-100"><%= blurb?.blurb_text || '' %></textarea>
+                </div>
+            </div>
+            <div class="d-f fd-col col-50">
+                <%- include('../FileUpload', { elementId: 'aboutFiles', multiple: true, imageOnly: true, files: blurb.files }) %>
+                <div class="col-100 d-f right">
+                    <input class="editAbout" type="submit" name="submit" id="" data-aboutid="<%= blurb.id %>">
+                </div>      
+            </div>  
+        </form>
+    </div>
+<% } %>

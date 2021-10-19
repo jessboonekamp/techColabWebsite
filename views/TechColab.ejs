@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="icon" href="public/images/icons/TechColabLogo.png">
+    <!-- <script src="/public/js/client.js"></script> -->
+    <script src="bs_scripts/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="bs_styles/bootstrap.min.css">
+    <title><%=Content%> | <%= AppName%></title>
+    <script src="/bs_scripts/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/bs_styles/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment-with-locales.min.js" integrity="sha512-LGXaggshOkD/at6PFNcp2V2unf9LzFq6LE+sChH7ceMTDP0g2kn6Vxwgg7wkPP7AAtX+lmPqPdxB47A0Nz0cMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+    </style>
+    <script src='/public/js/maps.js' type='module'></script>
+    <link rel="stylesheet" href="/public/css/main.css">
+    <script  src="/public/js/util.js" type="module"></script>
+
+
+</head>
+<div class="prof-card hide"></div>
+<body>
+
+    <%- include('partials/User/Navbar', {Content}); %>
+    <main>
+        <div class="pane-outer">
+            <div class="pane">
+                <% if(Content == "Home"){ %>
+                    <%- include('partials/User/Home'); %>
+                <% }else if(Content == "Projects"){ %>
+                    <%- include('partials/User/Projects') %>
+                <% }else if(Content == "Students"){ %>
+                    <%- include('partials/User/Students') %>
+                <% } %>
+                
+            </div>
+        </div>
+    </main>
+    <%- include('partials/User/Footer') %>
+    <script type="module" src="/public/js/navbar.js"></script>
+</body>
+</html>

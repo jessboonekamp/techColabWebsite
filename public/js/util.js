@@ -20,3 +20,79 @@ export function bindFn(htmlDomTokenList, bindingFn, fnArgs, eventName){
     htmlDomTokenList.addEventListener(eventName || 'click', e => bindingFn(e, ...fnArgs))
 
 }
+
+export function getLinkDomain(link, delimiter){
+
+    if(link){
+        if(!link.includes(delimiter)){
+            throw new Error('Delimiter doesn\'t exist in the string')
+        }
+    
+        let smLinks = ['linkedin', 'facebook', 'instagram', 'github'];
+        let icon = link?.split(delimiter).find(k => smLinks.includes(k));
+        if(icon){
+            return icon;
+        }else{
+            return 'link';
+        }
+    }else{
+        return
+    }
+}
+
+export function showHideSearchPane(e){
+
+    let target = $(e.target);
+
+    if(target.parents('.filters').length) return
+
+    let t = $(e.currentTarget).children(':last-child');
+    t.fadeToggle('fast', 'linear', handleFadeFinish)
+
+    function handleFadeFinish(){
+        t.css('display', 'inline-flex').toggleClass('hide');
+    }
+}
+
+export async function newFilteredSearch() {
+
+    let form = new FormData(document.getElementsByClassName('form-bar')[0]);
+
+    let qs = [];
+    for (let [key, value] of form)
+        value ? qs.push(`${key}=${value}`) : false;
+    
+    console.log(65, qs)
+
+    return qs.length ? qs.join('&') : null
+
+}
+
+export async function assignInputClearEvents(){
+
+    $(`input:not([type="submit"])`).on('input', e => {
+
+        let ct = $(e.currentTarget);
+
+        if(ct.val()){
+
+            console.log('VALUE')
+
+            if(ct.next().length){
+                console.log('clear exists')
+                return ct.next().fadeIn()
+
+            }
+
+            ct.parent().append(`<span class="clear-field">X</span>`)
+
+            ct.next().on('click', e => {
+                ct.val('');
+                $(e.currentTarget).fadeOut()
+            })
+
+        }
+
+    })
+
+}

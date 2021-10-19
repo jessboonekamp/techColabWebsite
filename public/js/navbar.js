@@ -13,7 +13,6 @@ $('.tile-container').on('scroll', function() {
 
 });
 
-
 export function initializeNavbar(){
 
     let navList = document.getElementById('navigation');

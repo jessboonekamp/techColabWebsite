@@ -1,7 +1,22 @@
 <div class="col-100">
     <label for="Files">Choose files</label>
-    <input type="file" multiple name="Files" <%- `id=${elementId}` %>>
+    <input type="file" multiple name="Files" id=<%= elementId %> <%- imageOnly ? `accept="image/png, image/jpeg, image/jpg, image/svg"` : '' %>>
+
     <div class="flex-box attachedFiles"></div>
     <label for="">Existing files</label>
-    <div class="flex-box existingFiles"></div>
+    <div class="flex-box existingFiles">
+        <% if(files){ %>
+            <% console.log(files) %>
+            <% files.forEach(({ id, name, path: filePath, is_hero }) => { %>
+                <div class="selected-opt d-f file-opt">
+                    <% console.log(filePath) %>
+                    <div class="file" style="background-image: url('<%- filePath %>')"></div>
+                    <span class="action-icon"><img data-imagename="<%= name %>" data-type="media" data-id="<%= id %>" src="/public/images/icons/bin.svg" class="btn-icon preview-trash-bin"></span>
+                    <span title="Make this image the hero image" class="cbx p-abs"><input type="checkbox"></span>
+                </div>
+            <% }) %>
+        <% } %>
+
+    </div>
 </div>
+

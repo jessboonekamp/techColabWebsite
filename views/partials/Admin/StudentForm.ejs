@@ -32,7 +32,7 @@
             </div>
         </div>
         <div class="d-f fd-col col-50">
-            <%- include('../FileUpload', { elementId: 'studentFiles', multiple: false }) %>
+            <%- include('../FileUpload', { elementId: 'studentFiles', multiple: false, imageOnly: false, files: null }) %>
             <div class="col-100 d-f right <%= noSubmit ? 'hide' : '' %>">
                 <input type="submit" name="submit" id="">
             </div>      

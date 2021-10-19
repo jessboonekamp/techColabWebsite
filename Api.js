@@ -2,11 +2,12 @@ const express = require('express');
 const session = require('express-session');
 const mysql = require('mysql');
 const formUploader = require('express-fileupload');
-const bcrypt = require('bcrypt');
 const path = require('path');
-const fs = require('fs').promises;
 const bootstrapDir = '/node_modules/bootstrap/dist/';
+const nodemailer = require('nodemailer');
+const fs = require('fs').promises;
 const app = express();
+const webAppConfig = require('./app.config.json');
 app.use(formUploader());
 app.set('trust proxy', 1);
 app.use(
@@ -23,8 +24,11 @@ app.use(
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/student_media', express.static(path.join(__dirname, 'files/student_media')));
 app.use('/project_media', express.static(path.join(__dirname, 'files/project_media')));
+app.use('/about_media', express.static(path.join(__dirname, 'files/about_media')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+
 
 
 // Load Bootstrap
@@ -35,7 +39,6 @@ app.use('/bs_scripts', express.static(__dirname + bootstrapDir + 'js'));
 app.use('/bs_styles', express.static(__dirname + bootstrapDir + 'css'));
 app.use('/modules', express.static(__dirname + 'node_modules/moment'));
 
-const webAppConfig = require('./app.config.json');
 let { port, database, adminUser, appName } = webAppConfig;
 
 app.set('views', './views');
@@ -55,6 +58,10 @@ dbPoolConnection.connect(err => {
 const AppClass = require('./components/App.Class')(dbPoolConnection);
 const AppFn = require('./components/App.Fn')(dbPoolConnection);
 const ApiMiddleware = require('./components/Api.Middleware');
+// Configure db password to encrypted string
+//(async () => { console.log(await (AppFn.encrypt('techcolabmail'))) })();
+console.log(AppFn.decrypt(webAppConfig.mailSvc.auth.pass))
+const { newMailService } = require('./components/Api.Services')(webAppConfig.mailSvc, AppFn.decrypt)
 
 // Middleware goes here
 
@@ -62,26 +69,30 @@ const ApiMiddleware = require('./components/Api.Middleware');
 // Api code goes here
 app.get('/', async (req, res, next) => {
 
-    let resObj, statCode, pageName = 'Home';
+    let resObj, statCode, pageName = 'TechColab';
 
     try {
+
+        console.log(app.get('MailSvc'))
 
         // Code here
         resObj = {
             Content: 'Home',
-            AppName: appName
+            AppName: appName,
+            AboutBlurbs: await AppFn.getAboutBlurbs(),
+            ApiKeys: webAppConfig.apis
         }
     
     } catch (e) {
     
-        console.log(e)
     
         if(!statCode) statCode = 500;
     
-        content = 'Error';
         resObj = {
+            Content: 'Error',
             ErrorTitle: 'Error',
-            ErrorMessage: e.message
+            ErrorMessage: e.message,
+            ApiKeys: webAppConfig.apis
         }
     
     }
@@ -91,6 +102,120 @@ app.get('/', async (req, res, next) => {
     res.status(statCode || 200).render(pageName, resObj)
 
 });
+
+app.get('/Projects', async (req, res, next) => {
+
+    let resObj, statCode, pageName = 'TechColab';
+
+    try {
+
+        // Code here
+        resObj = {
+            Content: 'Projects',
+            AppName: appName,
+            ApiKeys: webAppConfig.apis,
+            SearchFormFields: [
+                {
+                    displayTitle: 'Title',
+                    fieldName: 'title',
+                },
+                {
+                    displayTitle: 'Year',
+                    fieldName: 'project_date',
+                    type: 'number',
+                    pattern: '[0-9]{4}'
+                },
+                {
+                    displayTitle: 'Type',
+                    fieldName: 'project_type',
+                    type: 'select',
+                    options: ['All', 'techcolab', 'capstone']
+                }
+            ]
+        }
+    
+    } catch (e) {
+    
+    
+        if(!statCode) statCode = 500;
+    
+        resObj = {
+            Content: 'Error',
+            ErrorTitle: 'Error',
+            ErrorMessage: e.message,
+            ApiKeys: webAppConfig.apis
+        }
+    
+    }
+    
+    resObj.AppName = appName
+
+    res.status(statCode || 200).render(pageName, resObj)
+
+});
+
+app.get('/Students', async (req, res, next) => {
+
+    let resObj, statCode, pageName = 'TechColab';
+
+    try {
+
+        // Code here
+        resObj = {
+            Content: 'Students',
+            AppName: appName,
+            ApiKeys: webAppConfig.apis,
+            SearchFormFields: [
+                {
+                    displayTitle: 'First Name',
+                    fieldName: 'first_name'
+                },
+                {
+                    displayTitle: 'Last Name',
+                    fieldName: 'last_name'
+                }
+            ]
+        }
+    
+    } catch (e) {
+    
+    
+        if(!statCode) statCode = 500;
+    
+        resObj = {
+            Content: 'Error',
+            ErrorTitle: 'Error',
+            ErrorMessage: e.message,
+            ApiKeys: webAppConfig.apis
+        }
+    
+    }
+    
+    resObj.AppName = appName
+
+    res.status(statCode || 200).render(pageName, resObj)
+
+})
+
+app.get('/About', async (req, res, next) => {
+    let apiResData, apiResMessage,statCode;
+
+    try {
+        
+        apiResData = await AppFn.getAboutBlurbs();
+        if(!apiRes){
+            statCode = 400;
+            throw new Error(`Bad Request`)
+        }
+
+    } catch (e) {
+
+        apiResMessage = e.message;
+
+    }
+
+    res.status(statCode || 200).send(apiResData ? apiResData : { Message: apiResMsg })
+})
 
 app.get('/:entityType', async (req, res, next) => {
 
@@ -172,7 +297,7 @@ app.all('/adminLogin', async (req, res, next) => {
                     throw new Error(defaultMsg)
                 }
                 // Validate password;
-                if(!password || !await AppFn.decryptString(password, adminUser.password)){
+                if(!password || !await AppFn.compareEncString(password, adminUser.password)){
                     statCode = 401;
                     throw new Error(defaultMsg)
                 }
@@ -252,14 +377,10 @@ app.all("/admin/AddStudent", async (req, res, next) => {
 
             case 'POST':
 
-                // Check and upload files if applicable
-                let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
-
                 console.log(252, req.body)
 
-                let defaultMsg = `Student already exists.`;
                 let body = req.body;
-                if(!body){
+                if(!Object.keys(body).length){
                     statCode = 400;
                     throw new Error(`Bad request. No payload specified`);
                 }
@@ -275,13 +396,16 @@ app.all("/admin/AddStudent", async (req, res, next) => {
 
                     }
 
-                    return thisStudent
+                    throw new Error(`Student already exists.`)
                 
                 }
                 
                 let thisStudent = await newStudent(firstName, lastName, biography, linkedin);
 
-                if(thisStudent.length && uploadedFiles.length){
+                // Check and upload files if applicable
+                let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
+
+                if(thisStudent && uploadedFiles.length){
 
                     let heroImage = req.body?.heroImage;
                     if(heroImage){
@@ -298,6 +422,8 @@ app.all("/admin/AddStudent", async (req, res, next) => {
 
                     await AppFn.updateDbFileStore(thisStudent.id, uploadedFiles, 'student')
                 }
+
+                
 
                 await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
 
@@ -318,6 +444,8 @@ app.all("/admin/AddStudent", async (req, res, next) => {
     } catch (e) {
         
         console.log(e)
+
+        e.message.includes('exists') ? statCode = 409 : false;
 
         if(!statCode) statCode = 500;
 
@@ -493,6 +621,9 @@ app.get("/:entityType/search/:id*?", async (req, res, next) => {
         }
 
         let query = req.query;
+        if(entityType.toLowerCase() == 'project' && query.project_type == 'All'){
+            delete query.project_type;
+        }
         const paginationKeys = ['start','end','page'];
         let queryKeys = Object.keys(query).filter(k => !paginationKeys.includes(k));
         if(!queryKeys.length && !query?.start){
@@ -507,7 +638,7 @@ app.get("/:entityType/search/:id*?", async (req, res, next) => {
             case 'project':
 
                 if(!objId){
-                    searchProps = ['title'];
+                    searchProps = ['title', 'project_date', 'project_type'];
                     useFn = 'searchEntity';
                     fnArgs.push(query, entityType, 'project');
                 } else{
@@ -523,7 +654,7 @@ app.get("/:entityType/search/:id*?", async (req, res, next) => {
                 if(!objId){
                     searchProps = ['first_name', 'last_name'];
                     useFn = 'searchEntity';
-                    fnArgs.push(query, entityType);;
+                    fnArgs.push(query, entityType,'student');
                 } else{
                     query = objId; 
                     fnArgs.push(query);
@@ -715,6 +846,78 @@ app.all("/admin/projects/:projectId*?", async(req, res, next) => {
     res.status(statCode || 200).render("Admin", resObj);
 })
 
+app.all('/admin/about/:asType*?', async (req, res, next) => {
+
+    let apiResMsg, apiResData, statCode, resObj = {}, resMethod = 'render', renderPage;
+    let reqMethod = req.method;
+    try {
+        
+        switch(reqMethod){
+
+            case 'GET':
+
+                let content = await AppFn.getAboutBlurbs();
+
+                if(req.params?.asType){
+                    resMethod = 'send';
+                    apiResData = content
+                } else{
+                    // Render about content
+                    resObj.AboutBlurbs = content;
+                    resObj.AppName = appName;
+                    resObj.Content = 'About';
+                    renderPage = 'Admin'
+                }
+
+            break;
+
+            case 'POST':
+
+                let updateObj = req.body
+        
+                await AppFn.patchAbout(updateObj);
+
+                if(req?.files?.Files) await AppFn.updateDbFileStore(1, await AppFn.uploadFiles(req, 'about', __dirname), 'about');
+                
+            break;
+
+            default:
+                statCode = 405;
+                throw new Error(`Method ${req.method} isn't allowed.`)
+
+        }
+
+    } catch (e) {
+
+        console.log(e)
+
+        if(!statCode) statCode = 500;
+
+        apiResMsg = e.message
+    }
+
+    let resArgs = [];
+    if(apiResData){
+
+        resObj.Data = apiResData;
+        resArgs.push(resObj)
+
+    } else{
+
+        if(reqMethod === 'GET')
+            resArgs.push(renderPage, resObj)
+        else{
+            resObj.Message = apiResMsg;
+            resArgs.push(resObj)
+        }
+
+    }
+
+    console.log(resMethod, resArgs)
+    res.status(statCode || 200)[resMethod](...resArgs)
+
+})
+
 app.all('/admin/:entityType/:objectId', async (req, res, next) => {
 
     let apiResData, apiResMsg, statCode, resObj = {};
@@ -868,7 +1071,7 @@ app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
     
         let { entityType, objectId } = req.params;
 
-        if(!['student','project'].includes(entityType)){
+        if(!['student','project', 'about'].includes(entityType)){
             statCode = 400;
             throw new Error(`Bad request. Invalid EntityType. Must be a string.`)
         }
@@ -1016,64 +1219,42 @@ app.get('/:entityType/:objectId/files', async (req, res, next) => {
 
 });
 
-app.all('/admin/about', async (req, res, next) => {
+app.post('/contact', async (req, res) => {
 
-    let apiResMsg, apiResData, statCode, resObj = {}, resMethod = 'render', renderPage;
-    let reqMethod = req.method;
+    let statCode, apiResMsg;
     try {
         
-        switch(reqMethod){
+        const mailSvc = req.app.get('MailSvc');
 
-            case 'GET':
+        let { FullName, Company, Phone, Email, Query } = req.body;
 
-                // Render about content
-                resObj.AboutBlurbs = await AppFn.getAboutBlurbs();
-                resObj.AppName = appName;
-                resObj.Content = 'About';
-                renderPage = 'Admin'
+        let template = await fs.readFile('./templates/NewItem.nmp', 'utf-8');
 
-            break;
+        req.body.Query = `${FullName} from ${Company} has submitted a query.<br><br>
+        ${Query}
+        <br><br>
+        Contact: ${Phone}<br>
+        Email: <a href="mailto:${Email}">${Email}</a>.
+        `
 
-            case 'PATCH':
+        // template = template.replace('{FullName}', req.body.FullName)
+        // template = template.replace('{Query}', req.body.Query)
+        Object.keys(req.body).forEach(k => template = template.replace(new RegExp(`{${k}}`, 'gim'), req.body[k]))
 
-                resMethod = 'send';
+        await mailSvc.send(`New enquiry received`, template)
 
-            break;
-
-            default:
-                statCode = 405;
-                throw new Error(`Method ${req.method} isn't allowed.`)
-
-        }
+        apiResMsg = 'Success!'
 
     } catch (e) {
-
-        console.log(e)
-
+        
         if(!statCode) statCode = 500;
 
-        apiResMsg = e.message
-    }
-
-    let resArgs = [];
-    if(apiResData){
-
-        resObj.Data = apiResData;
-        resArgs.push(resObj)
-
-    } else{
-
-        if(reqMethod === 'GET')
-            resArgs.push(renderPage, resObj)
-        else{
-            resObj.Message = apiResMsg;
-            resArgs.push(resObj)
-        }
+        // Detail error
+        console.log(e)
 
     }
 
-    console.log(resMethod, resArgs)
-    res.status(statCode || 200)[resMethod](...resArgs)
+    res.status(statCode || 200).send({ Message: apiResMsg })
 
 })
 
@@ -1082,8 +1263,14 @@ app.get('*', async (req, res, next) => {
     res.status(404).send('DOESN\'T EXIST CHAMMMMMPP!!!!!')
 });
 
-const server = app.listen(port, () => {
+const server = app.listen(port, async () => {
+
     console.log(`Api listening on ${port}...`)
+
+    await fs.writeFile(path.join(__dirname, 'public/js/client-cfg.js'), `export let config = ${JSON.stringify(webAppConfig.apis)}`)
+
+    app.set('MailSvc', await newMailService())
+
 })
 
 

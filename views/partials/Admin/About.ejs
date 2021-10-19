@@ -1,8 +1,0 @@
-<% console.log(AboutBlurbs) %>
-<% if(AboutBlurbs.length) { %>
-    <% let blurb = AboutBlurbs[0]; %>
-    <h4 class="page-header"><%= blurb.header || 'About' %></h4>
-    <div class="card-container">
-        <%= blurb.blurb_text || 'Random shit goes here' %>
-    </div>
-<% } %>
