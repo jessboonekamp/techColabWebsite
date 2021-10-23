@@ -27,8 +27,12 @@
 <body>
 
     <%- include('partials/User/Navbar', {Content}); %>
+    <% if(Content != "Home"){ %>
+        <%- include('partials/SearchForm'); %>
+    <% } %>
+    
     <main>
-        <div class="pane-outer">
+        <div class="pane-outer <%= Content == 'Home' ? 'searchless-pane-outer' : '' %>">
             <div class="pane">
                 <% if(Content == "Home"){ %>
                     <%- include('partials/User/Home'); %>

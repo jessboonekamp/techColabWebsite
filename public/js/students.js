@@ -48,6 +48,9 @@ window.addEventListener('load', async e => {
 async function searchStudents(e, start, end, page, totalRows, append, signal){
     try {
         
+        $('.floating-box').addClass('hide');
+        $('.frost').addClass('hide');
+
         e?.preventDefault();
 
         if(isNaN(Number(start))) start = 1;
@@ -62,7 +65,7 @@ async function searchStudents(e, start, end, page, totalRows, append, signal){
 
         apiRes = await apiRes.json();
 
-        const container = $('.student-tile-container')
+        const container = $('.tile-container')
 
         !append ? container.html('') : false;
 
@@ -81,13 +84,10 @@ async function searchStudents(e, start, end, page, totalRows, append, signal){
             studentCard += linkedin ? `<div class="w-100">` : ` <div class="student-list-card" style="">`;
             studentCard+=` <span class="hide">${id}</span>
                         <div class="student-list-background" style="background-image: url(${profilePhoto?.path})">
-                            <div class="student-list-mask"></div>
                             <span class="student-list-name">
                                 ${first_name} ${last_name}
                             </span>
-                            <div class="desc-container">
-                                <span class="student-list-desc">${biography}</span>
-                            </div>
+                            <span class="student-list-desc">${biography}</span>
                         </div>
                     </div>`;
             studentCard += linkedin ? `</a>` : ``;

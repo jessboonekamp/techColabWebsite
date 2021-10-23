@@ -50,7 +50,8 @@ export function showHideSearchPane(e){
     t.fadeToggle('fast', 'linear', handleFadeFinish)
 
     function handleFadeFinish(){
-        t.css('display', 'inline-flex').toggleClass('hide');
+        let w = window.innerWidth < 1050 ? 'flex' : 'inline-flex';
+        t.css('display', w).toggleClass('hide');
     }
 }
 

@@ -81,6 +81,8 @@ function scrollContainerHorizontally(e, container) {
 function expandTile(e, project){
 
     if($(e.target).hasClass('thumb')) return;
+
+    $('body').addClass('mob-no-scroll-y');
     
     let ct = $(e.currentTarget);
 
@@ -302,6 +304,7 @@ function expandTile(e, project){
     
 
     $('.tile-column').fadeIn().css('display', 'flex').removeClass('hide')
+    
 
     // Create the Student elements
 
@@ -310,6 +313,10 @@ function expandTile(e, project){
 async function searchProjects(e, start, end, page, totalRows, append, signal){
 
     try {
+
+        $('.floating-box').addClass('hide');
+        $('.frost').addClass('hide');
+        $('body').removeClass('mob-no-scroll-y');
         
         e?.preventDefault();
 
@@ -375,11 +382,14 @@ async function searchProjects(e, start, end, page, totalRows, append, signal){
 }
 
 function closeFloatingContainer(){
-    $('.prof-card').addClass('hide')
+    $('body').removeClass('mob-no-scroll-y');
+    $('.prof-card').addClass('hide');
     $('.floating-box').addClass('hide');
-    $('.tile-blow-up').removeClass('tile-blow-up')
-    $('.frost').addClass('hide')
-    $('.tile-header').removeClass('hide')
+    $('.tile-blow-up').removeClass('tile-blow-up');
+    $('.frost').addClass('hide');
+    $('.tile-header').removeClass('hide');
+    $('.expanded').removeClass('expanded');
+    
 }
 
 function changeFloatingContainer(e, event){
