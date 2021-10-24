@@ -614,9 +614,8 @@ module.exports = function(dbPoolConnection) {
 
         },
         patchAbout: async function (updateObj){
-
+            console.log(updateObj)
             try {
-                
                  return await new Promise((resolve, reject) => {
                     dbPoolConnection.query(`UPDATE about SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = 1`, function (err, result){
                         if(err) return reject(err);
