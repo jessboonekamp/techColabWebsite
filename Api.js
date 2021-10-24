@@ -876,6 +876,7 @@ app.all('/admin/about/:asType*?', async (req, res, next) => {
                 let updateObj = req.body
         
                 await AppFn.patchAbout(updateObj);
+                console.log(879, req)
 
                 if(req?.files?.Files) await AppFn.updateDbFileStore(1, await AppFn.uploadFiles(req, 'about', __dirname), 'about');
                 
