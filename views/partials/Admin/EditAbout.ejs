@@ -1,9 +1,10 @@
 
+<script src="/public/js/loadContent.js" type="module"></script>
 <% if(AboutBlurbs.length) { %>
     <% console.log(AboutBlurbs) %>
     <% let blurb = AboutBlurbs[0]; %>
     <div class=" about">
-        <form method="POST" enctype="multipart/form-data" class="d-f fd-row">
+        <form method="POST" enctype="multipart/form-data" class="d-f fd-row" <%- `data-id="${blurb.id}"` %>>
             <div class="d-f fd-col col-50">
                 <div class="col-100">
                     <label for="header">Header</label>

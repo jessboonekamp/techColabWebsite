@@ -10,12 +10,12 @@
                         <% let heroStatus = false %>
                         <% for(var j = 0; j < s.media.length; j++){ %>
                             <% if(s?.media[j]?.is_hero){ %>
-                                <img class="student-image" src="<%= s.media[j] ? s.media[j].path : '' %>" alt="">
+                                <img class="student-image" src="<%= s.media[j] ? s.media[j].path : '' %>" alt="" data-image-name="<%= s.media[j].name %>">
                                 <% heroStatus = true %>
                             <% } %>
                         <% } %>
                         <% if(!heroStatus){ %>
-                            <img class="student-image" src="<%= s.media[0] ? s.media[0].path : '' %>" alt="">
+                            <img class="student-image" src="<%= s.media[0] ? s.media[0].path : '' %>" alt="" data-image-name="<%= s.media[0].name %>">
                         <% } %>
 
                     <% } else { %>

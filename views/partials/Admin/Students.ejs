@@ -8,7 +8,7 @@
                 <div>
                     <% let profilePhoto = s.profilePhoto %>
                     <% if(profilePhoto?.path) { %>
-                        <img class="student-image" src="<%= profilePhoto.path %>" alt="">
+                        <img class="student-image" src="<%= profilePhoto.path %>" alt="" data-image-name="<%= profilePhoto.name %>">
                     <% } else { %>
                         <div class="student-image student-image-none"></div>
                     <% } %>

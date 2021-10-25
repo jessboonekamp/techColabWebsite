@@ -1,5 +1,5 @@
 import { initializeNavbar } from './navbar.js';
-import { bindFn } from './util.js';
+import { bindFn, getContentUris } from './util.js';
 
 window.addEventListener('load', async e => {
 
@@ -27,12 +27,13 @@ window.addEventListener('load', async e => {
 
     bindFn(document.getElementById('searchStudents'), searchEntity, ['student'], 'input');
 
-    initializeNavbar()
+    initializeNavbar();
 
+    initialize();
 
-    initialize()
+    await getContentUris();
 
-
+    // Find images on the page
 
 });
 
@@ -297,7 +298,7 @@ async function editStudent(e, form, studentId, saveBtn){
     });
 
     studentModal.style.display = 'block'
-    console.log(studentModal.getElementsByTagName('form')[0])
+    await getContentUris();
 
 }
 
@@ -415,13 +416,16 @@ async function editProject(e, form, projectId, saveBtn){
 
     })
 
-    projectModal.style.display = 'block'
+    projectModal.style.display = 'block';
+    await getContentUris();
 
 }
 
 async function editAbout(e){
     let ct = e.currentTarget
-    let form = new FormData(document.getElementsByTagName('form')[0]);
+    let form =  document.getElementsByTagName('form')[0];
+    let aboutId = form.getAttribute('data-id');
+    form = new FormData(form);
     if(form){
         
 
@@ -432,7 +436,7 @@ async function editAbout(e){
 
             if(fileEl.files.length) {
 
-                let uploadForm = await uploadFiles(fileEl, 'about', 1);
+                let uploadForm = await uploadFiles(fileEl, 'about', aboutId);
 
                 fileEl.value = null;
 
@@ -460,13 +464,12 @@ async function editAbout(e){
     let about = await fetch(`/admin/about/content`)
 
     let aboutMedia = await getMedia(ct.getAttribute('data-aboutid'), 'about');
+    console.log(467, aboutMedia);
     $('.attachedFiles').html('');
     let commitedFileList =  document.getElementsByClassName('existingFiles')[0];
+    console.log(471, aboutMedia);
     aboutMedia.length ? await addFileToList(null, commitedFileList, aboutMedia) :  commitedFileList.innerHTML = '';
-
-
-    console.log(450, aboutMedia)
-
+    await getContentUris();
 }
 
 async function searchEntity(e, entityType){
@@ -617,7 +620,7 @@ function newNotificationMessage(message, className){
     let currentAlerts = document.getElementsByClassName('alert');
     if(currentAlerts.length) currentAlerts[0].remove();
 
-    let target = document.getElementsByClassName('pane-outer')[0];
+    let target = document.getElementsByClassName('admin-pane-outer')[0];
 
     let a = document.createElement('div');
     a.classList.add('alert', `alert-${className}`, 'action-msg')
@@ -634,7 +637,6 @@ async function submitForm(e){
     let status;
     e.preventDefault();
     try {
-        
         let useEntityType = e.target.parentElement.classList.contains('student') ? 'project' : 'student';
         
         if(useEntityType === 'about') return;
@@ -772,7 +774,7 @@ async function addFileToList(e, listEl, committedFileList){
 
             let thisFile = f[i];
 
-            await createFileEl(thisFile, removeFile, listEl, true)
+            await createFileEl(thisFile, removeFile, listEl, true, false)
 
         }
     
@@ -783,7 +785,7 @@ async function addFileToList(e, listEl, committedFileList){
 
         committedFileList.forEach(async file => {
 
-            let thisFileEl = await createFileEl(file, null, listEl);
+            let thisFileEl = await createFileEl(file, null, listEl, false, true);
 
             // If this is the hero, check the isHeroImage checkbox
             if(file.is_hero){
@@ -800,14 +802,15 @@ async function addFileToList(e, listEl, committedFileList){
     }
 
 
-    async function createFileEl(file, trashBinHandlerFn, targetList, readFromDisk){
-        
+    async function createFileEl(file, trashBinHandlerFn, targetList, readFromDisk, commitStatus){
+      
         let fileBox = document.createElement('div');
         fileBox.classList.add('selected-opt', 'd-f', 'file-opt');
         if(file?.is_hero) fileBox.setAttribute('data-ishero', true);
         let s = document.createElement('div');
         s.classList.add('file');
-        s.style.backgroundImage = `url("${readFromDisk ? await readFile(file) : file.path}")`;
+        s.setAttribute('data-image-name', file.name)
+        !commitStatus ? s.style.backgroundImage = `url("${readFromDisk ? await readFile(file) : file.path}")` : '';
         fileBox.append(s);
         let imgSpan = document.createElement('span');
         imgSpan.classList.add('action-icon');

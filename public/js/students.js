@@ -1,5 +1,5 @@
 import * as util from './util.js';
-let { bindFn, getLinkDomain, showHideSearchPane, newFilteredSearch, assignInputClearEvents } = util;
+let { bindFn, getLinkDomain, showHideSearchPane, newFilteredSearch, assignInputClearEvents, getContentUris } = util;
 
 
 window.addEventListener('load', async e => {
@@ -83,7 +83,7 @@ async function searchStudents(e, start, end, page, totalRows, append, signal){
             linkedin ? studentCard = `<a class="student-list-card" href="${linkedin}" target="_blank">` : ``;
             studentCard += linkedin ? `<div class="w-100">` : ` <div class="student-list-card" style="">`;
             studentCard+=` <span class="hide">${id}</span>
-                        <div class="student-list-background" style="background-image: url(${profilePhoto?.path})">
+                        <div class="student-list-background" style="background-image: url(${profilePhoto?.path})" data-image-name="${profilePhoto.name}">
                             <span class="student-list-name">
                                 ${first_name} ${last_name}
                             </span>
@@ -99,6 +99,7 @@ async function searchStudents(e, start, end, page, totalRows, append, signal){
             
             container.append(studentCard).fadeIn();
         });
+        await getContentUris();
 
         return  {
             start: s,

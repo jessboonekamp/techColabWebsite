@@ -1,3 +1,4 @@
+$(window).on('ContentLoadFinished', e => $('.page-loader').fadeOut().addClass('hide'))
 
 
 $('.tile-container').on('scroll', function() {

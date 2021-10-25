@@ -995,9 +995,16 @@ a:hover{
     justify-content: center;
     background: #bedbe0de;
 }
+.page-loader{
+    top: 0;
+}
 .lds-container > div{
     margin: auto;
     text-align: center;
+}
+.page-loader > div{
+    position: relative;
+    top:35%
 }
 .lds-roller {
     display: inline-block;
@@ -1085,6 +1092,16 @@ a:hover{
     left: 12px;
     background: var(--lds-y2);
   }
+
+  .image-loading::after{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+
+  }
+
   @keyframes lds-roller {
     0% {
       transform: rotate(0deg);

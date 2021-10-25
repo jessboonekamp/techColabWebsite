@@ -1,6 +1,8 @@
-module.exports = function(dbPoolConnection) {
+module.exports = function(databaseConnectionPool) {
 
-    if(!dbPoolConnection) throw new Error(`Cannot initialize without a database connection.`);
+    if(!databaseConnectionPool) throw new Error(`Cannot initialize without a database connection pool.`);
+
+    const { getPoolConnection } =  require('./Api.MySql.Utils')(databaseConnectionPool);
 
     const crypto = require('crypto');
     const path = require('path');
@@ -26,24 +28,27 @@ module.exports = function(dbPoolConnection) {
         return ['student','project','media'].includes(string.toLowerCase())
     }
 
-    function newDBQueryFilterString(object, type, operator, ){
+
+    function newDBQueryFilterString(object, type, operator){
 
         let delimiter = ' AND ';
         if(type === 'update') delimiter = ', ';
 
         if(operator === 'like') return Object.keys(object).map(k => `${k} LIKE '%${object[k]}%'`).join(delimiter) 
-
-        return Object.keys(object).map(k => `${castKeyAs(k)} = '${object[k]}'`).join(delimiter)
+        return Object.keys(object).map(k => `${type !== 'update' ? castKeyAs(k) : k} = '${object[k]}'`).join(delimiter)
     }
 
     
     async function newDBQuery(statement, conditionObj){
-        return await new Promise((resolve, reject) => {
-            dbPoolConnection.query(statement.concat(conditionObj ? ` WHERE ${newDBQueryFilterString(conditionObj)}` : ''), function (err, result){
+        return await new Promise(async (resolve, reject) => {
+            const connection = await getPoolConnection();
+            connection.query(statement.concat(conditionObj ? ` WHERE ${newDBQueryFilterString(conditionObj)}` : ''), function (err, result){
 
-                if(err) return reject(err);
+                connection.release();
 
-                return resolve(result);
+                if(err) return reject(err);                
+
+                return resolve(result)
 
             })
         })
@@ -54,11 +59,15 @@ module.exports = function(dbPoolConnection) {
         let sqlQuery = `SELECT * FROM student WHERE `;
         if(studentId) sqlQuery += `id = ${studentId}`;
         if(firstName && lastName) sqlQuery += `first_name = '${firstName}' and last_name = '${lastName}'`
-        console.log(sqlQuery)
-        return await new Promise((resolve, reject) => {
-            dbPoolConnection.query(sqlQuery, function(err, result){
+
+        return await new Promise(async (resolve, reject) => {
+            const connection = await getPoolConnection();
+            connection.query(sqlQuery, function(err, result){
     
+                connection.release();
+
                 if (err) return reject(err);
+
                 return resolve(result[0])
     
             });
@@ -68,11 +77,14 @@ module.exports = function(dbPoolConnection) {
     async function getMedia(owningObjId, entityType){
         
         try {
-            
-            let results = await new Promise((resolve, reject) => {
+            console.log(71, owningObjId, entityType);
+            let results = await new Promise(async (resolve, reject) => {
+                const connection = await getPoolConnection();
                 let sqlQuery = `SELECT * FROM media WHERE owning_id = ${owningObjId} AND entity_type = '${entityType}'`;
-                dbPoolConnection.query(sqlQuery, function(err, result){
+                connection.query(sqlQuery, function(err, result){
                 
+                    connection.release();
+
                     if (err) return reject(err);
         
                     return resolve(result)
@@ -107,13 +119,15 @@ module.exports = function(dbPoolConnection) {
             
             if(!validateAsId(objectId)) throw new Error(`Invalid ObjectId. Not a number.`);
             
-            return await new Promise((resolve, reject) => {
-                dbPoolConnection.query(`
+            return await new Promise(async (resolve, reject) => {
+                const connection = await getPoolConnection();
+                connection.query(`
                     SELECT Proj.*, SP.id AS link_id FROM student_project AS SP
                         LEFT JOIN ${entityType} AS Proj
                     ON Proj.id = SP.${entityType}_id
                         WHERE SP.${entityType === 'project' ? 'student' : 'project'}_id = ${objectId}                    
                 `, function (err, result){
+                    connection.release();
                     if(err) return reject(err);
                     return resolve(result);
                 })
@@ -133,8 +147,10 @@ module.exports = function(dbPoolConnection) {
 
             if(!validateAsId(studentId) || !validateAsId(projectId)) throw new Error(`Invalid Student/Project Id. Not a number.`);
 
-            return await new Promise((resolve, reject) => {
-                dbPoolConnection.query(`INSERT INTO student_project (student_id, project_id) VALUES(${studentId}, ${projectId})`, function (err, result){
+            return await new Promise(async (resolve, reject) => {
+                const connection = await getPoolConnection();
+                connection.query(`INSERT INTO student_project (student_id, project_id) VALUES(${studentId}, ${projectId})`, function (err, result){
+                    connection.release();
                     if(err) return reject(err);
                     return resolve(result);
                 })
@@ -213,15 +229,17 @@ module.exports = function(dbPoolConnection) {
             query = query && Object.keys(query).length ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : '';
 
             let resultSet = {};
-
-            let searchResults = await new Promise((resolve, reject) => {
+            
+            let searchResults = await new Promise(async (resolve, reject) => {
 
                 let sqlQuery = `
                     SELECT * FROM ${entityType} ${query} ${paginationStr}
                     SELECT COUNT(*) FROM ${entityType} ${query}
                 `;
+                const connection = await getPoolConnection();
+                connection.query(sqlQuery, function(err, result){
 
-                dbPoolConnection.query(sqlQuery, function(err, result){
+                    connection.release();
 
                     if(err) return reject(err)
 
@@ -318,7 +336,7 @@ module.exports = function(dbPoolConnection) {
 
         //         let sqlQuery = `SELECT * FROM ${entityType} ${query ? `WHERE ${newDBQueryFilterString(query, null, 'like')}` : ''}`
 
-        //         dbPoolConnection.query(sqlQuery, function(err, result){
+        //         (await getPoolConnection()).query(sqlQuery, function(err, result){
 
         //             if(err) return reject(err)
 
@@ -338,10 +356,11 @@ module.exports = function(dbPoolConnection) {
 
                 let targetSaveFolder = `files/${entityType}_media`;
                 if (req.files?.Files) {
-
+                    
                     if(!Array.isArray(req.files.Files)) req.files.Files = [ req.files.Files ];
 
-                    let files = req.files.Files;     
+                    let files = req.files.Files;
+                    
                     return await Promise.all(files.map(async file => {
 
                         let fileName;
@@ -350,9 +369,8 @@ module.exports = function(dbPoolConnection) {
                             fileName = file.name;
         
                             let filePath = path.join(defaultPath, targetSaveFolder, fileName);
-        
+                            console.log(254, 'uploading files')
                             await fs.writeFile(filePath, file.data);
-    
                             return {
                                 name: fileName,
                                 filePath: filePath
@@ -396,18 +414,22 @@ module.exports = function(dbPoolConnection) {
 
                     console.log(344, file)
 
-                    file = await new Promise((resolve, reject) => {
+                    file = await new Promise(async (resolve, reject) => {
 
                         console.log('Updating DB filestore...');
                         let sqlQuery = `
-                            INSERT into media (name, path, owning_id, entity_type) VALUES ('${name}', '${filePath.replace(/\\/g, '/')}', '${owningObjId}', '${entityType}')
+                            INSERT into media (name, path, owning_id, entity_type) VALUES ('${name}', '', '${owningObjId}', '${entityType}')
                         `;
-                     
-                        dbPoolConnection.query(sqlQuery, function(err, result){
+                        const connection = await getPoolConnection();
+                        connection.query(sqlQuery, function(err, result){
             
+                            connection.release();
+
                             if (err) return reject(err);
             
                             return resolve(result)
+
+                            
             
                         });
                     })
@@ -507,9 +529,10 @@ module.exports = function(dbPoolConnection) {
                 let sqlQuery = `SELECT * FROM project WHERE `;
                 if(projectId) sqlQuery += `id = ${projectId}`;
                 console.log(sqlQuery)
-                return await new Promise((resolve, reject) => {
-                    dbPoolConnection.query(sqlQuery, function(err, result){
-            
+                return await new Promise(async (resolve, reject) => {
+                    const connection = await getPoolConnection();
+                    connection.query(sqlQuery, function(err, result){
+                        connection.release();
                         if (err) return reject(err);
                         return resolve(result[0])
             
@@ -544,20 +567,25 @@ module.exports = function(dbPoolConnection) {
 
         },
         createStudent: async (firstName,lastName, biography, linkedin) => {
-            return await new Promise((resolve, reject) => {
+            return await new Promise(async (resolve, reject) => {
                 let sqlQuery = `INSERT into student ( first_name, last_name, biography, linkedin) VALUES ('${firstName}', '${lastName}', '${biography}', '${linkedin}')`;
                 console.log('inserting')
-                dbPoolConnection.query(sqlQuery, function(err, result){
+                const connection = await getPoolConnection();
+                connection.query(sqlQuery, function(err, result){
+
+                    connection.release();
 
                     if (err) return reject(err);
 
                     return resolve(result)
 
+                    
+
                 });
             })
         },
         createProject: async (title, project_date, project_type, description) => {
-            return await new Promise((resolve, reject) => {
+            return await new Promise(async (resolve, reject) => {
                 let sql = `
                     INSERT into project
                         (title, project_date, project_type, description) 
@@ -566,7 +594,10 @@ module.exports = function(dbPoolConnection) {
 
                     SELECT LAST_INSERT_ID() AS id
                 `
-                dbPoolConnection.query(sql, function (err, result){
+                const connection = await getPoolConnection();
+                connection.query(sql, function (err, result){
+                    connection.release();
+
                     if(err) return reject(err);
 
                     console.log(247, result)
@@ -581,8 +612,10 @@ module.exports = function(dbPoolConnection) {
 
                 if(!validateAsId(studentId)) throw new Error(`Invalid ObjectId. Not a number.`);
 
-                return await new Promise((resolve, reject) => {
-                    dbPoolConnection.query(`UPDATE student SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${studentId}`, function (err, result){
+                return await new Promise(async (resolve, reject) => {
+                    const connection = await getPoolConnection();
+                    connection.query(`UPDATE student SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${studentId}`, function (err, result){
+                        connection.release();
                         if(err) return reject(err);
                         return resolve(result);
                     })
@@ -601,8 +634,11 @@ module.exports = function(dbPoolConnection) {
                 if(!validateAsId(objectId)) throw new Error(`Invalid ObjectId. Not a number.`);
 
                 console.log(406, objectId, updateObj)
-                return await new Promise((resolve, reject) => {
-                    dbPoolConnection.query(`UPDATE project SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${objectId}`, function (err, result){
+                return await new Promise(async (resolve, reject) => {
+                    const connection = await getPoolConnection();
+                    console.log(640, updateObj);
+                    connection.query(`UPDATE project SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${objectId}`, function (err, result){
+                        connection.release();
                         if(err) return reject(err);
                         return resolve(result);
                     })
@@ -614,10 +650,13 @@ module.exports = function(dbPoolConnection) {
 
         },
         patchAbout: async function (updateObj){
-            console.log(updateObj)
+            updateObj['heroImage'] ? delete updateObj['heroImage'] : '';
             try {
-                 return await new Promise((resolve, reject) => {
-                    dbPoolConnection.query(`UPDATE about SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = 1`, function (err, result){
+                console.log(655, updateObj)
+                return await new Promise(async (resolve, reject) => {
+                    const connection = await getPoolConnection();
+                    connection.query(`UPDATE about SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = 5`, function (err, result){
+                        connection.release();
                         if(err) return reject(err);
                         return resolve(result);
                     })
@@ -684,10 +723,11 @@ module.exports = function(dbPoolConnection) {
             try {
 
                 let about = await newDBQuery(` SELECT * FROM about`)
-
+                
                 return (
                     await Promise.allSettled(about.map(async a => {
                         a.files =  await getMedia(a.id, 'about')
+                        console.log(729, about);
                         return a
                     }))
                 ).map(a => a.value)

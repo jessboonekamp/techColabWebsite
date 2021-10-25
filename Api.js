@@ -6,8 +6,19 @@ const path = require('path');
 const bootstrapDir = '/node_modules/bootstrap/dist/';
 const nodemailer = require('nodemailer');
 const fs = require('fs').promises;
+const { createReadStream } = require('fs');
 const app = express();
 const webAppConfig = require('./app.config.json');
+const AWS = require("aws-sdk");
+const bucketName = 'techcolabbucket';
+const S3 = new AWS.S3({
+  signatureVersion: "v4",
+  apiVersion: "2006-03-01",
+  accessKeyId: "AKIA5KEPN477NS6AE553",
+  secretAccessKey: "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",
+  region: "ap-southeast-2",
+});
+
 app.use(formUploader());
 app.set('trust proxy', 1);
 app.use(
@@ -45,22 +56,14 @@ app.set('views', './views');
 app.set('view engine', 'ejs');
 
 // Connect to db
-const dbPoolConnection = mysql.createConnection(database);
-
-dbPoolConnection.connect(err => {
-
-    if (err) throw err;
-
-    console.log("Connected!");
-
-});
+let dbPoolConnection = mysql.createPool(database);
 
 const AppClass = require('./components/App.Class')(dbPoolConnection);
 const AppFn = require('./components/App.Fn')(dbPoolConnection);
 const ApiMiddleware = require('./components/Api.Middleware');
 // Configure db password to encrypted string
 //(async () => { console.log(await (AppFn.encrypt('techcolabmail'))) })();
-console.log(AppFn.decrypt(webAppConfig.mailSvc.auth.pass))
+// console.log(AppFn.decrypt(webAppConfig.mailSvc.auth.pass))
 const { newMailService } = require('./components/Api.Services')(webAppConfig.mailSvc, AppFn.decrypt)
 
 // Middleware goes here
@@ -72,8 +75,6 @@ app.get('/', async (req, res, next) => {
     let resObj, statCode, pageName = 'TechColab';
 
     try {
-
-        console.log(app.get('MailSvc'))
 
         // Code here
         resObj = {
@@ -364,7 +365,6 @@ app.all("/admin/AddStudent", async (req, res, next) => {
     let statCode, resObj = { AppName: appName }, content, resMethod = 'render', resArgs = [];
 
     try {
-        
         switch(req.method){
     
             case 'GET':
@@ -376,8 +376,6 @@ app.all("/admin/AddStudent", async (req, res, next) => {
             break;
 
             case 'POST':
-
-                console.log(252, req.body)
 
                 let body = req.body;
                 if(!Object.keys(body).length){
@@ -402,28 +400,27 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 
                 let thisStudent = await newStudent(firstName, lastName, biography, linkedin);
 
-                // Check and upload files if applicable
-                let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
+                await manageFileUpload(req, thisStudent.id, 'student');
 
-                if(thisStudent && uploadedFiles.length){
+                // let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
+    
+                // if(!uploadedFiles.length) throw new Error(`Files failed to be uploaded`)
 
-                    let heroImage = req.body?.heroImage;
-                    if(heroImage){
-                        uploadedFiles = uploadedFiles.map(f => {
+                // let heroImage = req.body?.heroImage;
+                // if(heroImage){
+                //     uploadedFiles = uploadedFiles.map(f => {
 
-                            if(f.name === heroImage){
-                                f.is_hero = heroImage
-                            }
+                //         if(f.name === heroImage){
+                //             f.is_hero = heroImage
+                //         }
 
-                            return f
-                        })
-                        
-                    }
+                //         return f
+                //     })
+                // }
 
-                    await AppFn.updateDbFileStore(thisStudent.id, uploadedFiles, 'student')
-                }
-
-                
+                // await AppFn.updateDbFileStore(thisStudent.id, uploadedFiles, 'student');
+    
+                // await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
 
                 await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
 
@@ -485,25 +482,7 @@ app.all("/admin/addProject", async(req, res, next) => {
                 
                 let projectID = await newProject(title, project_date, project_type, description);
                 
-                console.log(346, body)
-
-                let uploadedFiles = await AppFn.uploadFiles(req, 'project', __dirname);
-    
-                if(!uploadedFiles.length) throw new Error(`Files failed to be uploaded`)
-
-                let heroImage = req.body?.heroImage;
-                if(heroImage){
-                    uploadedFiles = uploadedFiles.map(f => {
-
-                        if(f.name === heroImage){
-                            f.is_hero = heroImage
-                        }
-
-                        return f
-                    })
-                }
-
-                await AppFn.updateDbFileStore(projectID, uploadedFiles, 'project');
+                await manageFileUpload(req, projectID, 'project');
     
                 await AppFn.newStudentProjectLinkSet(req.body.StudentIDs, projectID, 'project');
                 
@@ -823,7 +802,7 @@ app.all("/admin/projects/:projectId*?", async(req, res, next) => {
                 }
 
                 delete updateObj?.heroImage
-
+                console.log(805, projectId)
                 await AppFn.patchProject(projectId, updateObj)
 
                 return res.send({
@@ -857,7 +836,7 @@ app.all('/admin/about/:asType*?', async (req, res, next) => {
             case 'GET':
 
                 let content = await AppFn.getAboutBlurbs();
-
+                
                 if(req.params?.asType){
                     resMethod = 'send';
                     apiResData = content
@@ -876,9 +855,12 @@ app.all('/admin/about/:asType*?', async (req, res, next) => {
                 let updateObj = req.body
         
                 await AppFn.patchAbout(updateObj);
-                console.log(879, req)
+                console.log(839, updateObj)
 
-                if(req?.files?.Files) await AppFn.updateDbFileStore(1, await AppFn.uploadFiles(req, 'about', __dirname), 'about');
+                resMethod = 'send'
+
+
+                if(req?.files?.Files) await AppFn.updateDbFileStore(5, await AppFn.uploadFiles(req, 'about', __dirname), 'about');
                 
             break;
 
@@ -913,8 +895,7 @@ app.all('/admin/about/:asType*?', async (req, res, next) => {
         }
 
     }
-
-    console.log(resMethod, resArgs)
+    console.log(898, resMethod, ...resArgs);
     res.status(statCode || 200)[resMethod](...resArgs)
 
 })
@@ -1061,14 +1042,104 @@ app.delete('/admin/:entityType/link/:id', async (req, res, next) => {
     res.status(statCode).end()
 
 });
+async function manageFileUpload(req, owningObjectId, entityType) {
+
+    try {
+    
+        console.log(req.files)
+
+        if(!req.files.Files) throw new Error(`No files.`);
+        if(!owningObjectId) throw new Error(`No owningObjectId specified.`);
+
+        if(!Array.isArray(req.files.Files)) req.files.Files = [req.files.Files];
+
+        let newDate = new Date().toString();
+    
+        const heroImage = req.body.heroImage;
+
+        req.files.Files = req.files.Files.map(f => {
+            if (f.name === heroImage) {
+                f.is_hero = heroImage;
+            }
+    
+            f.name = newDate + '_' + f.name;
+    
+            return f
+    
+        });
+        // Check and upload files if applicable
+        //let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
+        console.log(1074, req.files.Files);
+        await awsFileUpload(req.files.Files);  
+        await AppFn.updateDbFileStore(owningObjectId, req.files.Files, entityType)
+
+    } catch (e) {
+        console.log(e)
+    }
+
+}
+
+async function awsFileUpload(files){
+            
+    try {
+        
+
+
+        if(!Array.isArray(files)) files = [files];
+
+        await Promise.all(
+
+            files.map(async f => {
+
+                return S3.putObject(
+                    {
+                        Bucket: bucketName,
+                        Key: f.name,
+                        ContentType: f.type,
+                        ContentLength: f.size,
+                        Body: f.data // Accepts a Buffer (see file.data property of incoming file)
+                    },
+                    async (error, data) => {
+                        console.log(1122, error, data)
+
+                        console.log(1120, await getSignedUrl(f.name))
+
+                        Promise.resolve(data)
+                    }
+                )
+
+            })
+        )
+
+    } catch (e) {
+        console.log(e)
+    }
+
+}
+
+function getSignedUrl(fileName) {
+    return new Promise((resolve, reject) => {
+        S3.getSignedUrl(
+            "getObject",
+            {
+                Bucket: bucketName,
+                Key: fileName,
+            },
+            function (err, url) {
+                if (err) reject(err);
+
+                resolve(url);
+            }
+        );
+    });
+}
+
 
 app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
 
     let apiResData, apiResMsg, statCode;
     
     try {
-
-        console.log(req.body, req.files)
     
         let { entityType, objectId } = req.params;
 
@@ -1088,22 +1159,10 @@ app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
             throw new Error(`Bad request. No files in request body.`)
         }
 
-        let uploadedFiles = await AppFn.uploadFiles(req, entityType, __dirname);
-        console.log(766, uploadedFiles)
-        let heroImage = req.body?.heroImage;
-        if(heroImage){
-            uploadedFiles = uploadedFiles.map(f => {
 
-                if(f.name === heroImage){
-                    f.is_hero = heroImage
-                }
-
-                return f
-            })
-        }
-
-        apiResData = await AppFn.updateDbFileStore(objectId, uploadedFiles, entityType);
+        await manageFileUpload(req, objectId, entityType);
         
+        statCode = 204
     
     } catch (e) {
     
@@ -1121,6 +1180,44 @@ app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
     })
 
 });
+
+app.get('/files/:fileName/getUri', async (req, res) => {
+
+    let apiResData, apiResMsg, statCode;
+
+    try {
+        
+        let fileName = req.params?.fileName;
+        if(!fileName){
+            statCode = 400;
+            throw new Error(`Bad request. No FileName in URL parameters.`)
+        }
+
+        apiResData = {
+            uri: await getSignedUrl(fileName),
+            imageName: fileName
+        }
+
+    } catch (e) {
+        
+        console.log(e)
+
+        if(!statCode) statCode = 500;
+
+        apiResMsg = e.message
+
+    }
+
+    let resObj = {};
+    if(apiResData)
+        resObj.Data = apiResData
+    else
+        resObj.Message = apiResMsg;
+
+    res.status(statCode || 200).send(resObj)
+
+
+})
 
 app.all('/:entityType/:objectId/files/:fileId', async (req, res, next) => {
 
@@ -1152,8 +1249,6 @@ app.all('/:entityType/:objectId/files/:fileId', async (req, res, next) => {
             break;
 
             case 'PATCH':
-
-                console.log(req.method, req.body)
 
                 let body = req.body;
                 if(body?.is_hero){
@@ -1202,7 +1297,7 @@ app.get('/:entityType/:objectId/files', async (req, res, next) => {
     try {
         
         let {entityType, objectId} = req.params;
-        if(!['student', 'project'].includes(entityType) || isNaN(Number(objectId))){
+        if(!['student', 'project', 'about'].includes(entityType) || isNaN(Number(objectId))){
             statCode = 400;
             throw new Error(`Bad request. Invalid ObjectId, or entityType`);
         }

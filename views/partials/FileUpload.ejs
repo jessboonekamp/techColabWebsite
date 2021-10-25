@@ -10,7 +10,7 @@
             <% files.forEach(({ id, name, path: filePath, is_hero }) => { %>
                 <div class="selected-opt d-f file-opt">
                     <% console.log(filePath) %>
-                    <div class="file" style="background-image: url('<%- filePath %>')"></div>
+                    <div class="file" data-image-name="<%= name %>" style="background-image: url('<%- filePath %>')"></div>
                     <span class="action-icon"><img data-imagename="<%= name %>" data-type="media" data-id="<%= id %>" src="/public/images/icons/bin.svg" class="btn-icon preview-trash-bin"></span>
                     <span title="Make this image the hero image" class="cbx p-abs"><input type="checkbox"></span>
                 </div>

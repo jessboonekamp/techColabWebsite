@@ -47,6 +47,21 @@
                     <% } %>
                 </div>
             </div>
+            <div class="lds-container page-loader">
+                <div>
+                    <div class="lds-roller">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                    <p>Fetching <%= /Student/.test(Content) ? 'Students' : 'Projects' %>....</p>
+                </div>
+            </div>
         </div>
     </main>    
 </body>

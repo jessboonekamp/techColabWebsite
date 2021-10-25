@@ -97,3 +97,54 @@ export async function assignInputClearEvents(){
     })
 
 }
+
+export async function getContentUris(){
+
+    try {
+        let promises = [];
+        console.log(105, $('[data-image-name]'));
+        $('[data-image-name]').each((i, v) => {
+
+            v  = $(v);
+            let imageName = v.attr('data-image-name');
+            if(imageName) promises.push({
+                fn: fetch(`/files/${imageName}/getUri`),
+                imageName: imageName
+            })
+
+        });
+
+        (await Promise.allSettled(promises.map(p => p.fn))).forEach(async r => {
+            
+            r.value = await r.value.json();
+            
+            let { imageName, uri } = r.value.Data;
+
+            $(`[data-image-name="${imageName}"]`).each((i,v) => {
+
+                let element = $(v);
+
+                let tagName = element.prop('tagName');
+
+                if(tagName === 'DIV'){
+                    console.log('DIV ELEMENT');
+                    element.css(`background-image`, `url("${uri}")`);
+                }
+                else{
+                    console.log('IMG/VIDEO ELEMENT');
+                    element.prop('src', uri)
+                }
+
+
+            })
+
+
+        })
+
+        window.dispatchEvent(new CustomEvent('ContentLoadFinished'))
+        
+    } catch (e) {
+        console.log(e)
+    }
+
+}

@@ -1,5 +1,5 @@
 import * as util from './util.js';
-let { bindFn, getLinkDomain, showHideSearchPane, newFilteredSearch, assignInputClearEvents } = util;
+let { bindFn, getLinkDomain, showHideSearchPane, newFilteredSearch, assignInputClearEvents, getContentUris } = util;
 
 window.addEventListener('load', async e => {
 
@@ -107,12 +107,12 @@ function expandTile(e, project){
     let videoTargetBox = box.children('.tile');
 
     videoTargetBox.children('.video-player, .media-control').remove();
-    let heroClass = "hero-media"
+    let heroClass = "hero-media";
     videoTargetBox.append(`<div class="video-player hide"></div><div class="media-control">${project.media.map(m => {
         
-        if(isVideo(m.path)) return `<video class="${m.is_hero ? "hero-media" : ''} thumb"><source src="${m.path}" type="video/${m.path.substring(m.path.lastIndexOf('.') + 1)}"></video>`;
+        if(isVideo(m.path)) return `<video class="${m.is_hero ? "hero-media" : ''} thumb"><source data-image-name="${m.name}" src="${m.path}" type="video/${m.path.substring(m.path.lastIndexOf('.') + 1)}"></video>`;
         
-        return `<img  src="${m.path}" alt="Image" class="${m.is_hero ? "hero-media" : ''} thumb">`
+        return `<img  src="${m.path}" alt="Image" class="${m.is_hero ? "hero-media" : ''} thumb"  data-image-name="${m.name}">`
 
     }).join('')}</div>`)
 
@@ -153,7 +153,6 @@ function expandTile(e, project){
             path = ct.attr('src');
 
             videoTargetBox.css('background', `url(${path}) center`);
-
             // Hide the video plaer container
             videoPlayerBox.addClass('hide');
 
@@ -175,7 +174,7 @@ function expandTile(e, project){
 
         mediaControllerBox.addClass('video-bg');
 
-
+        
 
 
         console.log(e)
@@ -191,7 +190,7 @@ function expandTile(e, project){
         let el = '';
         project.students.forEach(student => {
             let img = '';
-            student.profilePhoto ? img = `<img class="project-student" src=${student.profilePhoto.path}>` : img = `<div class="project-student student-image-none"></div>`;
+            student.profilePhoto ? img = `<img class="project-student" src=${student.profilePhoto.path} data-image-name="${student.profilePhoto.name}">` : img = `<div class="project-student student-image-none"></div>`;
 
             el += (`
                 <div class="prof">
@@ -305,7 +304,7 @@ function expandTile(e, project){
 
     $('.tile-column').fadeIn().css('display', 'flex').removeClass('hide')
     
-
+    getContentUris();
     // Create the Student elements
 
 }
@@ -354,7 +353,7 @@ async function searchProjects(e, start, end, page, totalRows, append, signal){
                 }
                 let tileId = `tile-${new Date().getTime()}-${p.id}`;
                 container.append(`
-                <div class="tile tile-bg" id="${tileId}" style="background: url(${photo?.path})">
+                <div class="tile tile-bg" id="${tileId}" style="background: url(${photo?.path})" data-image-name="${photo.name}">
                     <h6 class="tile-header">${p.title}</h6>
                 </div>`
                 );
@@ -365,6 +364,8 @@ async function searchProjects(e, start, end, page, totalRows, append, signal){
 
 
         }
+
+        await getContentUris();
 
         return  {
             start: s,
@@ -417,5 +418,6 @@ function changeFloatingContainer(e, event){
     if(subsequentEl.length){
         subsequentEl.trigger('click')
     }
+    getContentUris();
 
 }

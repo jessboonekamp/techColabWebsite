@@ -5,7 +5,7 @@
 <div class="about-section d-f fd-col">
     <section class="d-f">
         <% const thisBlurb = AboutBlurbs[0] %>
-        <div class="section left-pane" style="background-image: url(<%= thisBlurb.files[0].path %>)">
+        <div class="section left-pane" style="background-image: url(<%= thisBlurb.files[0].path %>)" data-image-name="<%= thisBlurb.files[0].name%>">
             <div class="backdrop"></div>
             <h2><%= thisBlurb.header %></h2>
         </div>
