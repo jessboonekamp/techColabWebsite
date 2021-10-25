@@ -1359,15 +1359,20 @@ app.get('*', async (req, res, next) => {
     res.status(404).send('DOESN\'T EXIST CHAMMMMMPP!!!!!')
 });
 
-const server = app.listen(port, async () => {
+// const server = app.listen(port, async () => {
 
-    console.log(`Api listening on ${port}...`)
+//     console.log(`Api listening on ${port}...`)
 
-    await fs.writeFile(path.join(__dirname, 'public/js/client-cfg.js'), `export let config = ${JSON.stringify(webAppConfig.apis)}`)
+//     await fs.writeFile(path.join(__dirname, 'public/js/client-cfg.js'), `export let config = ${JSON.stringify(webAppConfig.apis)}`)
 
-    app.set('MailSvc', await newMailService())
+//     app.set('MailSvc', await newMailService())
 
-})
+// })
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}.`);
+});
 
 
 
