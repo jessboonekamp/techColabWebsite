@@ -61,6 +61,7 @@ let dbPoolConnection = mysql.createPool(database);
 const AppClass = require('./components/App.Class')(dbPoolConnection);
 const AppFn = require('./components/App.Fn')(dbPoolConnection);
 const ApiMiddleware = require('./components/Api.Middleware');
+const { stringify } = require('querystring');
 // Configure db password to encrypted string
 //(async () => { console.log(await (AppFn.encrypt('techcolabmail'))) })();
 // console.log(AppFn.decrypt(webAppConfig.mailSvc.auth.pass))
@@ -430,6 +431,7 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 // content = 'Students';
                 resMethod = 'redirect';
                 resArgs.push('/admin/students')
+
             break;
     
             default:
@@ -488,6 +490,10 @@ app.all("/admin/addProject", async(req, res, next) => {
                 await AppFn.newStudentProjectLinkSet(req.body.StudentIDs, projectID, 'project');
                 
                 content = "AddProject"
+
+                return res.send({
+                    Message: 'Project has been added!'
+                })
     
             break;
     
@@ -982,6 +988,10 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
                 }
                 
                 statCode = 204;
+
+                return res.send({
+                    Message: (entityType.charAt(0).toUpperCase() + entityType.slice(1) + ' has been deleted')
+                })
 
                 break;
 
