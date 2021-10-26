@@ -369,6 +369,8 @@ app.all("/admin/AddStudent", async (req, res, next) => {
     
             case 'GET':
 
+                resMethod = 'render';
+
                 resObj.Content = "AddStudent";
 
                 resArgs.push('Admin', resObj)
@@ -428,7 +430,6 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 // content = 'Students';
                 resMethod = 'redirect';
                 resArgs.push('/admin/students')
-
             break;
     
             default:
