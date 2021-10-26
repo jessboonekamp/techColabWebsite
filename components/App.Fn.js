@@ -34,8 +34,8 @@ module.exports = function(databaseConnectionPool) {
         let delimiter = ' AND ';
         if(type === 'update') delimiter = ', ';
 
-        if(operator === 'like') return Object.keys(object).map(k => `${k} LIKE '%${object[k]}%'`).join(delimiter) 
-        return Object.keys(object).map(k => `${type !== 'update' ? castKeyAs(k) : k} = '${object[k]}'`).join(delimiter)
+        if(operator === 'like') return Object.keys(object).map(k => `${k} LIKE %"${object[k]}"%`).join(delimiter) 
+        return Object.keys(object).map(k => `${type !== 'update' ? castKeyAs(k) : k} = "${object[k]}"`).join(delimiter)
     }
 
     
