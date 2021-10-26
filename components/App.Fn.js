@@ -590,7 +590,7 @@ module.exports = function(databaseConnectionPool) {
                     INSERT into project
                         (title, project_date, project_type, description) 
                     VALUES 
-                        ('${title}', '${project_date}', '${project_type}', '${description}');
+                        ("${title}", '${project_date}', "${project_type}", "${description}");
 
                     SELECT LAST_INSERT_ID() AS id
                 `
