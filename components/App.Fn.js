@@ -568,7 +568,7 @@ module.exports = function(databaseConnectionPool) {
         },
         createStudent: async (firstName,lastName, biography, linkedin) => {
             return await new Promise(async (resolve, reject) => {
-                let sqlQuery = `INSERT into student ( first_name, last_name, biography, linkedin) VALUES ('${firstName}', '${lastName}', '${biography}', '${linkedin}')`;
+                let sqlQuery = `INSERT into student ( first_name, last_name, biography, linkedin) VALUES ("${firstName}", "${lastName}", "${biography}", "${linkedin}")`;
                 console.log('inserting')
                 const connection = await getPoolConnection();
                 connection.query(sqlQuery, function(err, result){
