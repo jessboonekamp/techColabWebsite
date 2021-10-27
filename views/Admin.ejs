@@ -59,7 +59,7 @@
                         <div></div>
                         <div></div>
                     </div>
-                    <p>Fetching <%= /Student/.test(Content) ? 'Students' : 'Projects' %>....</p>
+                    <p>Fetching <% if(Content == 'Students' || Content == 'Projects' || Content == 'About'){Content} %>....</p>
                 </div>
             </div>
         </div>
