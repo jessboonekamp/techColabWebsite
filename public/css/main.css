@@ -1117,11 +1117,21 @@ a:hover{
     .home-directions-box{
         margin-bottom: 20rem;
     }
+    .offer-box{
+        margin-bottom: 10rem;
+    }
 }
 
 @media screen and (max-width: 470px){
     .offer-section ul{
         font-size: small;
+    }
+    footer > div:first-child {
+        padding: 2.5rem;
+    }
+    footer{
+        font-size: small;
+        max-width: 100%;
     }
 }
 
