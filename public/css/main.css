@@ -1127,13 +1127,19 @@ a:hover{
         flex: 1 0 20%;
     }
     .contact-section{
-        position: unset;
+        position: unset!important;
     }
     .contact-email-div{
         flex-direction: column;
     }
     .form > div{
         width: 100%;
+    }
+    .offer-section{
+        margin-bottom: 15em;
+    }
+    .offer-section ul{
+        font-size: small;
     }
 
 }
