@@ -468,8 +468,8 @@ async function editAbout(e){
     console.log(467, aboutMedia);
     $('.attachedFiles').html('');
     let commitedFileList =  document.getElementsByClassName('existingFiles')[0];
-    console.log(471, aboutMedia);
     aboutMedia.length ? await addFileToList(null, commitedFileList, aboutMedia) :  commitedFileList.innerHTML = '';
+    initCheckboxEvents()
     await getContentUris();
 }
 
@@ -804,7 +804,6 @@ async function addFileToList(e, listEl, committedFileList){
 
 
     async function createFileEl(file, trashBinHandlerFn, targetList, readFromDisk, commitStatus){
-      
         let fileBox = document.createElement('div');
         fileBox.classList.add('selected-opt', 'd-f', 'file-opt');
         if(file?.is_hero) fileBox.setAttribute('data-ishero', true);
