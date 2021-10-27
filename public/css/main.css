@@ -1117,6 +1117,24 @@ a:hover{
     .about-section section:first-child .home-directions-box {
         padding-bottom: 30em!important;
     }
+    .navbar{
+        flex-wrap: unset;
+    }
+    .burger-menu-items{
+        top: 5.9rem;
+    }
+    .left-pane{
+        flex: 1 0 20%;
+    }
+    .contact-section{
+        position: unset;
+    }
+    .contact-email-div{
+        flex-direction: column;
+    }
+    .form > div{
+        width: 100%;
+    }
 
 }
 
