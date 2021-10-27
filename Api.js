@@ -1320,8 +1320,8 @@ app.post('/contact', async (req, res) => {
     let statCode, apiResMsg;
     try {
         
-        const mailSvc = req.app.get('MailSvc');
-
+        // const mailSvc = req.app.get('MailSvc');
+        
         let { FullName, Company, Phone, Email, Query } = req.body;
 
         let template = await fs.readFile('./templates/NewItem.nmp', 'utf-8');
@@ -1337,7 +1337,7 @@ app.post('/contact', async (req, res) => {
         // template = template.replace('{Query}', req.body.Query)
         Object.keys(req.body).forEach(k => template = template.replace(new RegExp(`{${k}}`, 'gim'), req.body[k]))
 
-        await mailSvc.send(`New enquiry received`, template)
+        await newMailService.send(`New enquiry received`, template)
 
         apiResMsg = 'Success!'
 
