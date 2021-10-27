@@ -227,7 +227,6 @@ form.success::after{
 form > div{ 
     display: grid;
     box-sizing: border-box;
-    padding: 6px;
 }
 .form-bar{ gap: .5rem; }
 .form-part > div{
