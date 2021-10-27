@@ -142,14 +142,15 @@ async function deleteObject(e){
 
         let status = apiRes.status;
 
+        console.log(145, apiRes)
+        newNotificationMessage((entityType.charAt(0).toUpperCase() + entityType.slice(1) + ' has been deleted'), 'success')
+
         if(status === 204) $(ct).parents('.card').fadeOut().remove();
 
-        console.log(status)
         
     } catch (e) {
-        console.log(e)
+        newNotificationMessage(e.message, 'error')
     }
-
 }
 
 // MOVE TO UTILITY FILE

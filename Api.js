@@ -370,11 +370,7 @@ app.all("/admin/AddStudent", async (req, res, next) => {
     
             case 'GET':
 
-                resMethod = 'render';
-
-                resObj.Content = "AddStudent";
-
-                resArgs.push('Admin', resObj)
+                content = "AddStudent";
 
             break;
 
@@ -394,16 +390,14 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                         console.log('Creating Student')
                         await AppFn.createStudent(firstName,lastName, biography, linkedin);
                         return await AppFn.getStudent(null, firstName, lastName)
-
                     }
-
-                    throw new Error(`Student already exists.`)
-                
                 }
                 
                 let thisStudent = await newStudent(firstName, lastName, biography, linkedin);
-
-                await manageFileUpload(req, thisStudent.id, 'student');
+                if(thisStudent){
+                    await manageFileUpload(req, thisStudent.id, 'student');
+                    await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
+                }
 
                 // let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
     
@@ -425,12 +419,10 @@ app.all("/admin/AddStudent", async (req, res, next) => {
     
                 // await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
 
-                await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
+
 
                 // resObj.Students = await searchStudents();
                 // content = 'Students';
-                resMethod = 'redirect';
-                resArgs.push('/admin/students')
 
             break;
     
@@ -452,8 +444,8 @@ app.all("/admin/AddStudent", async (req, res, next) => {
         content = 'Error';
 
     }
-
-    res.status(statCode || 200)[resMethod](...resArgs)
+    resObj.Content = content;
+    res.status(statCode || 200).render('Admin', resObj)
     
 });
 
@@ -489,7 +481,7 @@ app.all("/admin/addProject", async(req, res, next) => {
     
                 await AppFn.newStudentProjectLinkSet(req.body.StudentIDs, projectID, 'project');
                 
-                content = "AddProject"
+                content = "projects"
 
                 return res.send({
                     Message: 'Project has been added!'
@@ -989,9 +981,7 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
                 
                 statCode = 204;
 
-                return res.send({
-                    Message: (entityType.charAt(0).toUpperCase() + entityType.slice(1) + ' has been deleted')
-                })
+                apiResMsg = (entityType.charAt(0).toUpperCase() + entityType.slice(1) + ' has been deleted');
 
                 break;
 
@@ -1058,8 +1048,7 @@ async function manageFileUpload(req, owningObjectId, entityType) {
     try {
     
         console.log(req.files)
-
-        if(!req.files.Files) throw new Error(`No files.`);
+        if(!req.files?.Files) return;
         if(!owningObjectId) throw new Error(`No owningObjectId specified.`);
 
         if(!Array.isArray(req.files.Files)) req.files.Files = [req.files.Files];

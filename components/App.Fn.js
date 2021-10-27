@@ -34,7 +34,7 @@ module.exports = function(databaseConnectionPool) {
         let delimiter = ' AND ';
         if(type === 'update') delimiter = ', ';
 
-        if(operator === 'like') return Object.keys(object).map(k => `${k} LIKE %"${object[k]}"%`).join(delimiter) 
+        if(operator === 'like') return Object.keys(object).map(k => `${k} LIKE "%${object[k]}%"`).join(delimiter) 
         return Object.keys(object).map(k => `${type !== 'update' ? castKeyAs(k) : k} = "${object[k]}"`).join(delimiter)
     }
 
@@ -636,10 +636,10 @@ module.exports = function(databaseConnectionPool) {
                 console.log(406, objectId, updateObj)
                 return await new Promise(async (resolve, reject) => {
                     const connection = await getPoolConnection();
-                    console.log(640, updateObj);
+                    console.log(640, `UPDATE project SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${objectId}`);
                     connection.query(`UPDATE project SET ${newDBQueryFilterString(updateObj, 'update')} WHERE id = ${objectId}`, function (err, result){
-                        connection.release();
                         if(err) return reject(err);
+                        connection.release();
                         return resolve(result);
                     })
                 })
