@@ -1136,10 +1136,16 @@ a:hover{
         width: 100%;
     }
     .offer-section{
-        margin-bottom: 15em;
+        margin-bottom: 15em;    
     }
     .offer-section ul{
         font-size: small;
+    }
+    .search-filter-box{
+        top: 6.0rem;
+    }
+    .footer{
+        padding: unset!important;
     }
 
 }
