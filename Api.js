@@ -42,6 +42,7 @@ app.use(express.json());
 
 
 
+
 // Load Bootstrap
 // You'll be able to access these in the ejs via their named locations; 
 //  -src="bs_scripts/file_name"
@@ -66,6 +67,7 @@ const { stringify } = require('querystring');
 //(async () => { console.log(await (AppFn.encrypt('techcolabmail'))) })();
 // console.log(AppFn.decrypt(webAppConfig.mailSvc.auth.pass))
 const { newMailService } = require('./components/Api.Services')(webAppConfig.mailSvc, AppFn.decrypt)
+app.set('MailSvc', await newMailService())
 
 // Middleware goes here
 
@@ -1366,7 +1368,7 @@ app.get('*', async (req, res, next) => {
 
 //     await fs.writeFile(path.join(__dirname, 'public/js/client-cfg.js'), `export let config = ${JSON.stringify(webAppConfig.apis)}`)
 
-app.set('MailSvc', await newMailService())
+
 
 // })
 
