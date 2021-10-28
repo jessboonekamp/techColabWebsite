@@ -1132,13 +1132,11 @@ a:hover{
     footer{
         font-size: small;
         max-width: 100%;
+        padding: unset;
     }
 }
 
 @media screen and (max-width: 650px){
-    .about-section section:first-child .home-directions-box {
-        padding-bottom: 30em!important;
-    }
     .navbar{
         flex-wrap: unset;
     }
