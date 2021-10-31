@@ -1184,6 +1184,26 @@ a:hover{
     .burger-show{
         top: 4.7rem;
     }
+    .floating-box{
+        position: fixed;
+        top: 10.2rem;
+        padding-bottom: 0.8rem;
+        width: -webkit-fill-available;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        z-index: 14;
+        background: #000000a6;
+    }
+    .project-desc{
+        font-size: smaller;
+    }
+    .p-desc{
+        padding: 1em;
+        overflow: auto;
+        overflow: auto;
+        height: 7em;
+    }
 }
 
 @media screen and (max-width: 470px){
