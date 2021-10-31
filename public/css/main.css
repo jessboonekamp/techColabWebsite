@@ -1181,6 +1181,9 @@ a:hover{
     .offer-box{
         margin-bottom: 10rem;
     }
+    .burger-show{
+        top: 4.7rem;
+    }
 }
 
 @media screen and (max-width: 470px){
@@ -1199,7 +1202,7 @@ a:hover{
         padding-bottom: 10em;
     }
     .burger-show{
-        top: 4.7rem;
+        top: 5.3rem;
     }
 }
 
