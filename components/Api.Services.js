@@ -4,15 +4,16 @@ module.exports = function(mailConfig, decryptor){
 
     if(typeof decryptor !== 'function') throw new Error(`Invalid Decryptor. Must be a function.`);
 
-    return {
-        newMailService: async function(){
-     
-            mailConfig.auth.pass = decryptor(mailConfig.auth.pass)
+    mailConfig.auth.pass = decryptor(mailConfig.auth.pass);
 
+    return {
+
+        newMailService: async function(){          
+        
             const mailerService = require('nodemailer').createTransport(mailConfig);
 
             mailerService.on('error', e => console.log(e));
-            
+
             if(!await mailerService.verify()) throw new Error(`Email Service verification issue. Check Gmail configuration.`)
 
             mailerService.send = async function(subject, html){

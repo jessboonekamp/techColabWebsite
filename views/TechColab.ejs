@@ -26,7 +26,6 @@
 </head>
 <div class="prof-card hide"></div>
 <body>
-
     <%- include('partials/User/Navbar', {Content}); %>
     <% if(Content != "Home"){ %>
         <%- include('partials/SearchForm'); %>
@@ -38,9 +37,11 @@
                 <% if(Content == "Home"){ %>
                     <%- include('partials/User/Home'); %>
                 <% }else if(Content == "Projects"){ %>
-                    <%- include('partials/User/Projects') %>
+                    <%- include('partials/User/ToolTip', {ToolTipContent}); %>
+                    <%- include('partials/User/Projects'); %>
                 <% }else if(Content == "Students"){ %>
-                    <%- include('partials/User/Students') %>
+                    <%- include('partials/User/ToolTip', {ToolTipContent}); %>
+                    <%- include('partials/User/Students'); %>
                 <% } %>
                 
             </div>

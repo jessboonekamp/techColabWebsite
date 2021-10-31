@@ -4,11 +4,11 @@
             <div class="d-f fg-6">
                 <div class="col-50 <%- modal ? 'modal-part' : 'form-part' %>">
                     <label for="first_name">First Name</label>
-                    <input type="text" name="first_name" id="" class="col-100">
+                    <input type="text" name="first_name" id="" class="col-100" required>
                 </div>
                 <div class="col-50 <%- modal ? 'modal-part' : 'form-part' %>">
                     <label for="last_name">Last Name</label>
-                    <input type="text" name="last_name" id="" class="col-100">
+                    <input type="text" name="last_name" id="" class="col-100" required>
                 </div>
             </div>
             <div class="col-100 <%- modal ? 'modal-part' : 'form-part' %>">
@@ -21,7 +21,7 @@
                 <!-- <input type="text" name="biography" id=""> -->
                 <input type="text" name="linkedin" id="" class="col-100">
             </div>
-            <div class="col-100">
+            <div class="col-100 p-rel">
                 <label class="col-100">Select Project(s)</label>
                 <input type="text" id="searchProjects" class="search-input col-100" autocomplete="off" name="title" placeholder="Type 3 or more characters...">
                 <div class="p-rel">

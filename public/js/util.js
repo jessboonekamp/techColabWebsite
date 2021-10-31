@@ -148,3 +148,7 @@ export async function getContentUris(){
     }
 
 }
+
+export function manageToolTip(e) {
+    $('.tool-tip').addClass('hide');
+}

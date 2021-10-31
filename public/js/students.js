@@ -1,5 +1,5 @@
 import * as util from './util.js';
-let { bindFn, getLinkDomain, showHideSearchPane, newFilteredSearch, assignInputClearEvents, getContentUris } = util;
+let { bindFn, getLinkDomain, showHideSearchPane, newFilteredSearch, assignInputClearEvents, getContentUris, manageToolTip } = util;
 
 
 window.addEventListener('load', async e => {
@@ -18,6 +18,8 @@ window.addEventListener('load', async e => {
     $('.form-bar').on('submit', searchStudents);
 
     bindFn(document.getElementsByTagName('body')[0], loadDataOnScroll, null, 'wheel')
+
+    $('body').on('click', manageToolTip);
 
     async function loadDataOnScroll(e) {
 

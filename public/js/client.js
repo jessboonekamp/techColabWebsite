@@ -144,7 +144,7 @@ async function deleteObject(e){
 
         console.log(145, apiRes)
         newNotificationMessage((entityType.charAt(0).toUpperCase() + entityType.slice(1) + ' has been deleted'), 'success')
-
+        window.location.reload();
         if(status === 204) $(ct).parents('.card').fadeOut().remove();
 
         
@@ -475,11 +475,14 @@ async function editAbout(e){
 
 async function searchEntity(e, entityType){
 
+    let ct;
+
     try {
 
         e.stopPropagation()
 
-        let ct = e.currentTarget;
+        ct = e.currentTarget;
+        $(ct).parent().addClass('wheel-input')
 
         let dropDown = ct.nextElementSibling;
 
@@ -490,6 +493,7 @@ async function searchEntity(e, entityType){
         let value = ct.value;
 
         if(value.length < 3){
+            $(ct).parent().removeClass('wheel-input')
             dropDown.innerHTML = ''
             return;
         }
@@ -547,6 +551,8 @@ async function searchEntity(e, entityType){
         newNotificationMessage(e.message, 'error')
 
     }
+
+    $(ct).parent().removeClass('wheel-input')
 
 }
 
@@ -635,7 +641,7 @@ function newNotificationMessage(message, className){
 
 async function submitForm(e){
 
-    let status;
+    let status, msgClass = 'success';
     e.preventDefault();
     try {
         let useEntityType = e.target.parentElement.classList.contains('student') ? 'project' : 'student';
@@ -649,12 +655,19 @@ async function submitForm(e){
         form = setHeroImageSelection(form);
 
         //let apiRes = await fetch(window.location.href, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: form })
-        await fetch(window.location.href, { method: 'POST', body: form })
+        let apiRes = await fetch(window.location.href, { method: 'POST', body: form });
+        apiRes = await apiRes.json();
+        newNotificationMessage(apiRes.Message, msgClass);
+        setTimeout(() => {
+            window.location.assign(window.location.href.includes('Project') ? 'projects' : 'students')
+        }, 2000);
+
 
 
     } catch (e) {
         console.log(e)
-        newNotificationMessage(e.message, 'error')
+        msgClass = 'error';
+        newNotificationMessage(e.message, msgClass)
     }
 
 }

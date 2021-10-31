@@ -204,6 +204,34 @@ h1{
     padding: 2rem;
 }
 label{ font-weight: 600; }
+.wheel-input::after{
+    content: '';
+    border-radius: 50%;
+    border-left: 3px solid #816ece;
+    border-right: 3px solid #341ec0;
+    border-top: 3px solid #040442;
+    border-bottom: 3px solid #1e225a;
+    width: 1rem;
+    height: 1rem;
+    position: absolute;
+    animation-name: spinInputWheel;
+    animation-duration: .7s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-fill-mode: both;
+    position: absolute;
+    top: 1.8rem;
+    right: -1.3333333992312557rem
+}
+@keyframes spinInputWheel {
+    50%{
+        border-top-color: transparent;
+        border-bottom-color: transparent;
+    }
+    100%{
+        transform: rotate(360deg);
+    }
+}
 input, textarea{
     outline: none;
     border: 1px solid #3f748378;
@@ -937,6 +965,39 @@ footer > div:first-child{ padding: 3rem;}
     z-index: 5;
     padding: 0 .5rem .25rem .5rem;
 }
+
+.tool-tip{
+    z-index: 25;
+    width: 10em;
+    position: absolute;
+    background: black;
+    color: aliceblue;
+    padding: 0.5em;
+    border-radius: 0.75em;
+    border: 1px solid #7f7f82;
+    box-shadow: -3px 3px 12px 2px #273846;
+    font-size: smaller;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    top: -2em;
+    left: 15em;
+}
+.tool-tip::after{
+    content: '';
+    width: 2rem;
+    height: 1rem;
+    background-color: #000;
+    position: absolute;
+    right: 7rem;
+    top: 0;
+    transform: skewX(59deg);
+    border-left: 1px solid #a8adb2d6;
+}
+.tool-tip-content{
+    z-index: 4;
+}
+
 .hide{ display: none!important; }
 .p-rel{ position: relative; }
 .d-f{ display: flex; }

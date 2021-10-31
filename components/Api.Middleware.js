@@ -5,6 +5,7 @@ module.exports = {
         if(!req.session.username) return res.redirect('/adminLogin');
     
         next()
+        
     }
 
 }

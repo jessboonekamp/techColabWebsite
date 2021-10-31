@@ -6,8 +6,21 @@ module.exports = function(databaseConnectionPool) {
 
     const crypto = require('crypto');
     const path = require('path');
+    const AWS = require("aws-sdk");
     const fs = require('fs').promises;
+    const bcrypt = require('bcrypt');
     const maxCount = 6;
+
+
+    // AWS Bucket Name
+    const bucketName = 'techcolabbucket';
+    const S3 = new AWS.S3({
+        signatureVersion: "v4",
+        apiVersion: "2006-03-01",
+        accessKeyId: "AKIA5KEPN477NS6AE553",
+        secretAccessKey: "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",
+        region: "ap-southeast-2",
+    });
 
     function castKeyAs(key){
         const castings = {
@@ -187,6 +200,140 @@ module.exports = function(databaseConnectionPool) {
 
     }
 
+    async function updateDbFileStore(owningObjId, uploadedFiles, entityType){
+        
+        try {
+    
+            if(!validateAsId(owningObjId)) throw new Error('Invalid OwningObjectId.');
+            
+            console.log(112, uploadedFiles)
+    
+            if(!Array.isArray(uploadedFiles) || !uploadedFiles.find(f => typeof f === 'object'))
+                throw new Error(`Invalid File Array.`);
+    
+            if(!entityType) throw new Error(`No EntityType specified.`);
+    
+            const addFile = async file => {
+
+                let { name, filePath } = file;
+
+                // Check if the file is marked as the hero image
+                let is_hero = file?.is_hero;
+
+                console.log(344, file)
+
+                file = await new Promise(async (resolve, reject) => {
+
+                    console.log('Updating DB filestore...');
+                    let sqlQuery = `
+                        INSERT into media (name, path, owning_id, entity_type) VALUES ('${name}', '', '${owningObjId}', '${entityType}')
+                    `;
+                    const connection = await getPoolConnection();
+                    connection.query(sqlQuery, function(err, result){
+        
+                        connection.release();
+
+                        if (err) return reject(err);
+        
+                        return resolve(result)
+
+                        
+        
+                    });
+                })
+
+                console.log(356, file)
+                // If it's set as the hero image, update the object store, remove all existing flags and replace with this one
+                if(is_hero){
+                    await setHeroMedia(file.insertId, owningObjId)
+                }
+
+                return file.insertId
+
+            };   
+            
+            return await Promise.all(uploadedFiles.map(file => addFile(file)))
+    
+        } catch (e) {
+            console.log(e)
+            throw new Error(`Failed to update File Store in database. Error: ${e.message}`)
+        }
+    
+    }
+
+    
+    async function setHeroMedia(id, owningId){
+
+        try {
+
+            console.log(626, arguments)
+
+            if(!validateAsId(id) || !validateAsId(owningId)) throw new Error(`Invalid Id/OwningId.`);
+            
+            await newDBQuery(`UPDATE media SET is_hero = NULL`, { owning_id: owningId });
+            
+            await newDBQuery(`UPDATE media SET is_hero = true`, { id: id })
+
+
+        } catch (e) {
+            throw new Error(`SetHeroImage failed. Error: ${e.message}.`)
+        }
+
+    }
+
+    async function getSignedUrl(fileName){
+        return new Promise((resolve, reject) => {
+            S3.getSignedUrl(
+                "getObject",
+                {
+                    Bucket: bucketName,
+                    Key: fileName,
+                },
+                function (err, url) {
+                    if (err) reject(err);
+    
+                    resolve(url);
+                }
+            );
+        });
+    }
+
+    async function awsFileUpload(files){
+                        
+        try {
+    
+            if(!Array.isArray(files)) files = [files];
+    
+            await Promise.all(
+    
+                files.map(async f => {
+    
+                    return S3.putObject(
+                        {
+                            Bucket: bucketName,
+                            Key: f.name,
+                            ContentType: f.type,
+                            ContentLength: f.size,
+                            Body: f.data // Accepts a Buffer (see file.data property of incoming file)
+                        },
+                        async (error, data) => {
+                            console.log(1122, error, data)
+    
+                            console.log(1120, await getSignedUrl(f.name))
+    
+                            Promise.resolve(data)
+                        }
+                    )
+    
+                })
+            )
+    
+        } catch (e) {
+            console.log(e)
+        }
+    
+    }
+
     return {
 
         encrypt: function (text){
@@ -199,6 +346,7 @@ module.exports = function(databaseConnectionPool) {
             //returns encryptedData:iv=key
         },        
         decrypt: function(text){
+            console.log(202, text)
             let iv = Buffer.from((text.split(':')[1]).split('=')[0], 'hex')//will return iv;
             let enKey = Buffer.from(text.split('=')[1], 'hex')//will return key;
             let encryptedText = Buffer.from(text.split(':')[0], 'hex');//returns encrypted Data
@@ -392,66 +540,7 @@ module.exports = function(databaseConnectionPool) {
         
         
         },
-        updateDbFileStore: async function (owningObjId, uploadedFiles, entityType){
-        
-            try {
-        
-                if(!validateAsId(owningObjId)) throw new Error('Invalid OwningObjectId.');
-                
-                console.log(112, uploadedFiles)
-        
-                if(!Array.isArray(uploadedFiles) || !uploadedFiles.find(f => typeof f === 'object'))
-                    throw new Error(`Invalid File Array.`);
-        
-                if(!entityType) throw new Error(`No EntityType specified.`);
-        
-                const addFile = async file => {
-
-                    let { name, filePath } = file;
-
-                    // Check if the file is marked as the hero image
-                    let is_hero = file?.is_hero;
-
-                    console.log(344, file)
-
-                    file = await new Promise(async (resolve, reject) => {
-
-                        console.log('Updating DB filestore...');
-                        let sqlQuery = `
-                            INSERT into media (name, path, owning_id, entity_type) VALUES ('${name}', '', '${owningObjId}', '${entityType}')
-                        `;
-                        const connection = await getPoolConnection();
-                        connection.query(sqlQuery, function(err, result){
-            
-                            connection.release();
-
-                            if (err) return reject(err);
-            
-                            return resolve(result)
-
-                            
-            
-                        });
-                    })
-
-                    console.log(356, file)
-                    // If it's set as the hero image, update the object store, remove all existing flags and replace with this one
-                    if(is_hero){
-                        await this.setHeroMedia(file.insertId, owningObjId)
-                    }
-
-                    return file.insertId
-
-                };   
-                
-                return await Promise.all(uploadedFiles.map(file => addFile(file)))
-        
-            } catch (e) {
-                console.log(e)
-                throw new Error(`Failed to update File Store in database. Error: ${e.message}`)
-            }
-        
-        },    
+        updateDbFileStore: updateDbFileStore,    
         getMedia: getMedia,
         getFile: getFile,
         deleteMedia: async function (fileId){
@@ -738,23 +827,43 @@ module.exports = function(databaseConnectionPool) {
             }
 
         },
-        setHeroMedia: async (id, owningId) => {
+        Util: {
+            manageFileUpload: async function(req, owningObjectId, entityType) {
 
-            try {
+                try {
 
-                console.log(626, arguments)
-
-                if(!validateAsId(id) || !validateAsId(owningId)) throw new Error(`Invalid Id/OwningId.`);
+                    console.log(req.files)
+                    if(!req.files?.Files) return;
+                    if(!owningObjectId) throw new Error(`No owningObjectId specified.`);
+            
+                    if(!Array.isArray(req.files.Files)) req.files.Files = [req.files.Files];
+            
+                    let newDate = new Date().toString();
                 
-                await newDBQuery(`UPDATE media SET is_hero = NULL`, { owning_id: owningId });
+                    const heroImage = req.body.heroImage;
+            
+                    req.files.Files = req.files.Files.map(f => {
+                        if (f.name === heroImage) {
+                            f.is_hero = heroImage;
+                        }
                 
-                await newDBQuery(`UPDATE media SET is_hero = true`, { id: id })
-
-
-            } catch (e) {
-                throw new Error(`SetHeroImage failed. Error: ${e.message}.`)
-            }
-
+                        f.name = newDate + '_' + f.name;
+                
+                        return f
+                
+                    });
+                    // Check and upload files if applicable
+                    //let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
+                    console.log(1074, req.files.Files);
+                    await awsFileUpload(req.files.Files);
+                    await updateDbFileStore(owningObjectId, req.files.Files, entityType)
+            
+                } catch (e) {
+                    console.log(e)
+                }
+            
+            },
+            getSignedUrl: getSignedUrl
         }
         
     }

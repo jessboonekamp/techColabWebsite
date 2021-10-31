@@ -9,15 +9,7 @@ const fs = require('fs').promises;
 const { createReadStream } = require('fs');
 const app = express();
 const webAppConfig = require('./app.config.json');
-const AWS = require("aws-sdk");
-const bucketName = 'techcolabbucket';
-const S3 = new AWS.S3({
-  signatureVersion: "v4",
-  apiVersion: "2006-03-01",
-  accessKeyId: "AKIA5KEPN477NS6AE553",
-  secretAccessKey: "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",
-  region: "ap-southeast-2",
-});
+
 
 app.use(formUploader());
 app.set('trust proxy', 1);
@@ -52,25 +44,125 @@ app.use('/bs_styles', express.static(__dirname + bootstrapDir + 'css'));
 app.use('/modules', express.static(__dirname + 'node_modules/moment'));
 
 let { port, database, adminUser, appName } = webAppConfig;
-
+const { isAuthorized } = require('./components/Api.Middleware');
 app.set('views', './views');
 app.set('view engine', 'ejs');
 
 // Connect to db
 let dbPoolConnection = mysql.createPool(database);
 
-const AppClass = require('./components/App.Class')(dbPoolConnection);
 const AppFn = require('./components/App.Fn')(dbPoolConnection);
-const ApiMiddleware = require('./components/Api.Middleware');
-const { stringify } = require('querystring');
-// Configure db password to encrypted string
-//(async () => { console.log(await (AppFn.encrypt('techcolabmail'))) })();
-// console.log(AppFn.decrypt(webAppConfig.mailSvc.auth.pass))
+const { manageFileUpload, getSignedUrl } = AppFn.Util;
 const { newMailService } = require('./components/Api.Services')(webAppConfig.mailSvc, AppFn.decrypt)
-// app.set('MailSvc', await newMailService())
 
 // Middleware goes here
 
+app.get('/adminLogin', async (req, res, next) => {
+
+    console.log('ADMIN LOGIN')
+
+    let statCode;
+
+    let resObj = {
+        AppName: appName,
+        Content: null,
+        FormError: null
+    }
+
+    try {
+
+        // project in a db
+        resObj.Content = 'Login'
+
+        
+    } catch (e) {
+        
+        console.log(e)
+
+        if(!statCode) statCode = 500;
+
+
+    }
+
+    res.status(statCode || 200).render('Login', resObj)
+
+});
+
+app.all('/adminLogin', async (req, res, next) => {
+
+    let statCode = 200, resObj = { 
+        AppName: appName,
+        FormError: null,
+        Content: null
+    }, content, resMethod = 'redirect', resArgs = [];
+
+    // All FormData gets bound to the Req.Body
+    try {
+
+        switch(req.method){
+
+            case 'POST':
+
+                let defaultMsg = 'Invalid username or password.';
+                let body = req.body;
+                if(!body){
+                    statCode = 400;
+                    throw new Error('Bad request. No payload specified.')
+                }
+
+
+                // Validate request body
+                let { username, password } = body;
+
+                // Validate username
+                if(!username || username.toLowerCase() !== adminUser.userName){
+                    statCode = 401;
+                    throw new Error(defaultMsg)
+                }
+                // Validate password;
+                if(!password || !await AppFn.compareEncString(password, adminUser.password)){
+                    statCode = 401;
+                    throw new Error(defaultMsg)
+                }
+
+
+                req.session.username = username;
+                req.session.created = new Date();
+                // resMethod = 'redirect'
+                resArgs.push('/admin/students')
+                // Set page to Admin
+                // content = 'Admin';
+
+            break;
+
+            default:
+                statCode = 405;
+                throw new Error(`Method ${req.method} not allowed.`)
+
+
+        }
+
+    } catch (e) {
+
+        if(!statCode) statCode = 500;
+
+        console.log(e)
+
+        // content = 'Login';
+
+        resArgs.push('/adminLogin')
+        resObj.FormError = e.message
+
+    }
+
+    resObj.Content = content;
+
+    // // Poor url changing on login. 
+    // if(statCode !== 200)
+    //     return res.status(statCode  200).render('Home', resObj);
+    res.status(statCode || 200)[resMethod](...resArgs)
+
+});
 
 // Api code goes here
 app.get('/', async (req, res, next) => {
@@ -118,6 +210,7 @@ app.get('/Projects', async (req, res, next) => {
             Content: 'Projects',
             AppName: appName,
             ApiKeys: webAppConfig.apis,
+            ToolTipContent: 'Click here to search Projects',
             SearchFormFields: [
                 {
                     displayTitle: 'Title',
@@ -169,6 +262,7 @@ app.get('/Students', async (req, res, next) => {
             Content: 'Students',
             AppName: appName,
             ApiKeys: webAppConfig.apis,
+            ToolTipContent: 'Click here to search Students',
             SearchFormFields: [
                 {
                     displayTitle: 'First Name',
@@ -242,108 +336,7 @@ app.get('/:entityType', async (req, res, next) => {
 
 });
 
-app.get('/adminLogin', async (req, res, next) => {
-
-    let statCode;
-
-    let resObj = {
-        AppName: appName,
-        Content: null,
-        FormError: null
-    }
-
-    try {
-
-        // project in a db
-        resObj.Content = 'Login'
-
-        
-    } catch (e) {
-        
-        if(!statCode) statCode = 500;
-
-
-    }
-
-    res.status(statCode || 200).render('Login', resObj)
-
-});
-
-app.all('/adminLogin', async (req, res, next) => {
-
-    let statCode = 200, resObj = { 
-        AppName: appName,
-        FormError: null,
-        Content: null
-    }, content, resMethod = 'redirect', resArgs = [];
-
-    // All FormData gets bound to the Req.Body
-    try {
-
-        switch(req.method){
-
-            case 'POST':
-
-                let defaultMsg = 'Invalid username or password.';
-                let body = req.body;
-                if(!body){
-                    statCode = 400;
-                    throw new Error('Bad request. No payload specified.')
-                }
-
-
-                // Validate request body
-                let { username, password } = body;
-
-                // Validate username
-                if(!username || username.toLowerCase() !== adminUser.userName){
-                    statCode = 401;
-                    throw new Error(defaultMsg)
-                }
-                // Validate password;
-                if(!password || !await AppFn.compareEncString(password, adminUser.password)){
-                    statCode = 401;
-                    throw new Error(defaultMsg)
-                }
-
-
-                req.session.username = username;
-                req.session.created = new Date();
-                // resMethod = 'redirect'
-                resArgs.push('/admin/students')
-                // Set page to Admin
-                // content = 'Admin';
-
-            break;
-
-            default:
-                statCode = 405;
-                throw new Error(`Method ${req.method} not allowed.`)
-
-
-        }
-
-    } catch (e) {
-
-        if(!statCode) statCode = 500;
-
-        // content = 'Login';
-
-        resArgs.push('/adminLogin')
-        resObj.FormError = e.message
-
-    }
-
-    resObj.Content = content;
-
-    // // Poor url changing on login. 
-    // if(statCode !== 200)
-    //     return res.status(statCode  200).render('Home', resObj);
-    res.status(statCode || 200)[resMethod](...resArgs)
-
-});
-
-app.get('/admin', async (req, res, next) => {
+app.get('/admin', isAuthorized, async (req, res, next) => {
 
     let statCode, resObj = { AppName: appName }, content;
 
@@ -363,7 +356,7 @@ app.get('/admin', async (req, res, next) => {
 
 });
 
-app.all("/admin/AddStudent", async (req, res, next) => {
+app.all("/admin/AddStudent", isAuthorized, async (req, res, next) => {
 
     let statCode, resObj = { AppName: appName }, content, resMethod = 'render', resArgs = [];
 
@@ -399,32 +392,11 @@ app.all("/admin/AddStudent", async (req, res, next) => {
                 if(thisStudent){
                     await manageFileUpload(req, thisStudent.id, 'student');
                     await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
+                    
+                    return res.send({
+                        Message: 'Student has been added!'
+                    })
                 }
-
-                // let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
-    
-                // if(!uploadedFiles.length) throw new Error(`Files failed to be uploaded`)
-
-                // let heroImage = req.body?.heroImage;
-                // if(heroImage){
-                //     uploadedFiles = uploadedFiles.map(f => {
-
-                //         if(f.name === heroImage){
-                //             f.is_hero = heroImage
-                //         }
-
-                //         return f
-                //     })
-                // }
-
-                // await AppFn.updateDbFileStore(thisStudent.id, uploadedFiles, 'student');
-    
-                // await AppFn.newStudentProjectLinkSet(req.body.ProjectIDs, thisStudent.id, 'student');
-
-
-
-                // resObj.Students = await searchStudents();
-                // content = 'Students';
 
             break;
     
@@ -444,14 +416,16 @@ app.all("/admin/AddStudent", async (req, res, next) => {
         if(!statCode) statCode = 500;
 
         content = 'Error';
+        resObj.ErrorContent = e.message
 
     }
+    
     resObj.Content = content;
     res.status(statCode || 200).render('Admin', resObj)
     
 });
 
-app.all("/admin/addProject", async(req, res, next) => {
+app.all("/admin/addProject", isAuthorized, async(req, res, next) => {
     // Define function parameters
     let statCode, resObj = { AppName: appName }, content;
 
@@ -512,7 +486,7 @@ app.all("/admin/addProject", async(req, res, next) => {
 });
 
 ///admin
-app.get("/admin/:entityType/search/:id*?", async (req, res, next) => {
+app.get("/admin/:entityType/search/:id*?", isAuthorized, async (req, res, next) => {
 
     let statCode, apiResMsg, apiResData;
 
@@ -671,7 +645,7 @@ app.get("/:entityType/search/:id*?", async (req, res, next) => {
 });
 
 // Ensure ordering of Request -- Response -- Next
-app.all("/admin/students/:studentId*?", async(req, res, next) => {
+app.all("/admin/students/:studentId*?", isAuthorized, async(req, res, next) => {
 
     let statCode, resObj = {Appname : appName}, content, students, resMethod
 
@@ -739,7 +713,7 @@ app.all("/admin/students/:studentId*?", async(req, res, next) => {
     res.status(statCode || 200).render("Admin", resObj);
 });
 
-app.all("/admin/projects/:projectId*?", async(req, res, next) => {
+app.all("/admin/projects/:projectId*?", isAuthorized, async(req, res, next) => {
     let statCode, resObj = {Appname: appName}, content;
 
     try {
@@ -826,7 +800,7 @@ app.all("/admin/projects/:projectId*?", async(req, res, next) => {
     res.status(statCode || 200).render("Admin", resObj);
 })
 
-app.all('/admin/about/:asType*?', async (req, res, next) => {
+app.all('/admin/about/:asType*?', isAuthorized, async (req, res, next) => {
 
     let apiResMsg, apiResData, statCode, resObj = {}, resMethod = 'render', renderPage;
     let reqMethod = req.method;
@@ -901,7 +875,7 @@ app.all('/admin/about/:asType*?', async (req, res, next) => {
 
 })
 
-app.all('/admin/:entityType/:objectId', async (req, res, next) => {
+app.all('/admin/:entityType/:objectId', isAuthorized, async (req, res, next) => {
 
     let apiResData, apiResMsg, statCode, resObj = {};
     
@@ -1008,7 +982,7 @@ app.all('/admin/:entityType/:objectId', async (req, res, next) => {
 
 });
 
-app.delete('/admin/:entityType/link/:id', async (req, res, next) => {
+app.delete('/admin/:entityType/link/:id', isAuthorized, async (req, res, next) => {
 
     let apiResMsg, statCode;
     
@@ -1045,99 +1019,10 @@ app.delete('/admin/:entityType/link/:id', async (req, res, next) => {
     res.status(statCode).end()
 
 });
-async function manageFileUpload(req, owningObjectId, entityType) {
-
-    try {
-    
-        console.log(req.files)
-        if(!req.files?.Files) return;
-        if(!owningObjectId) throw new Error(`No owningObjectId specified.`);
-
-        if(!Array.isArray(req.files.Files)) req.files.Files = [req.files.Files];
-
-        let newDate = new Date().toString();
-    
-        const heroImage = req.body.heroImage;
-
-        req.files.Files = req.files.Files.map(f => {
-            if (f.name === heroImage) {
-                f.is_hero = heroImage;
-            }
-    
-            f.name = newDate + '_' + f.name;
-    
-            return f
-    
-        });
-        // Check and upload files if applicable
-        //let uploadedFiles = await AppFn.uploadFiles(req, 'student', __dirname);
-        console.log(1074, req.files.Files);
-        await awsFileUpload(req.files.Files);  
-        await AppFn.updateDbFileStore(owningObjectId, req.files.Files, entityType)
-
-    } catch (e) {
-        console.log(e)
-    }
-
-}
-
-async function awsFileUpload(files){
-            
-    try {
-        
 
 
-        if(!Array.isArray(files)) files = [files];
 
-        await Promise.all(
-
-            files.map(async f => {
-
-                return S3.putObject(
-                    {
-                        Bucket: bucketName,
-                        Key: f.name,
-                        ContentType: f.type,
-                        ContentLength: f.size,
-                        Body: f.data // Accepts a Buffer (see file.data property of incoming file)
-                    },
-                    async (error, data) => {
-                        console.log(1122, error, data)
-
-                        console.log(1120, await getSignedUrl(f.name))
-
-                        Promise.resolve(data)
-                    }
-                )
-
-            })
-        )
-
-    } catch (e) {
-        console.log(e)
-    }
-
-}
-
-function getSignedUrl(fileName) {
-    return new Promise((resolve, reject) => {
-        S3.getSignedUrl(
-            "getObject",
-            {
-                Bucket: bucketName,
-                Key: fileName,
-            },
-            function (err, url) {
-                if (err) reject(err);
-
-                resolve(url);
-            }
-        );
-    });
-}
-
-
-app.post('/:entityType/:objectId/addFiles', async (req, res, next) => {
+app.post('/:entityType/:objectId/addFiles', isAuthorized, async (req, res, next) => {
 
     let apiResData, apiResMsg, statCode;
     
@@ -1322,9 +1207,10 @@ app.post('/contact', async (req, res) => {
     let statCode, apiResMsg;
     try {
         
-        // const mailSvc = req.app.get('MailSvc');
-        // console.log(1324, newMailService)
-        const ms = await newMailService();
+        if(!req.app.get('MailSvc')) req.app.set('MailSvc', await newMailService());
+
+        const ms = req.app.get('MailSvc');
+        
         let { FullName, Company, Phone, Email, Query } = req.body;
 
         let template = await fs.readFile('./templates/NewItem.nmp', 'utf-8');
@@ -1374,7 +1260,7 @@ app.get('*', async (req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`);
+  console.log(`Server is running on port ${PORT}.`)
 });
 
 
