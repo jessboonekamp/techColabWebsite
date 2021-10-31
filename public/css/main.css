@@ -765,12 +765,14 @@ video{
     width: 3.5rem;
     height: 3.5rem;
     background-size: contain;
+    background-repeat: no-repeat;
 }
 .burger-menu-items{
     position: unset;
     display: none
 }
 .burger-show{ flex-direction: column; }
+
 nav{
     position: sticky!important;
     top: 0;
@@ -1178,6 +1180,9 @@ a:hover{
     }
     .offer-box{
         margin-bottom: 10rem;
+    }
+    .about-tc-sct{
+        padding-bottom: 10em;
     }
 }
 
