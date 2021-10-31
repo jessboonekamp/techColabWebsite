@@ -1194,6 +1194,17 @@ a:hover{
         flex-direction: column;
         z-index: 14;
         background: #000000a6;
+        overflow: auto;
+    }
+    .floating-box > .box-content > .tile-to-half{
+        height: 25rem;
+    }
+    .floating-box > .tile-column{
+        height: unset;
+    }
+    .thumb{
+        width: 2em;
+        height: 2em;
     }
     .project-desc{
         font-size: smaller;
@@ -1204,6 +1215,7 @@ a:hover{
         overflow: auto;
         height: 7em;
     }
+    
 }
 
 @media screen and (max-width: 470px){
