@@ -1198,6 +1198,9 @@ a:hover{
     .about-tc-sct{
         padding-bottom: 10em;
     }
+    .burger-show{
+        top: 4.7rem;
+    }
 }
 
 @media screen and (max-width: 650px){
