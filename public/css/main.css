@@ -1181,9 +1181,6 @@ a:hover{
     .offer-box{
         margin-bottom: 10rem;
     }
-    .about-tc-sct{
-        padding-bottom: 10em;
-    }
 }
 
 @media screen and (max-width: 470px){
@@ -1197,6 +1194,9 @@ a:hover{
         font-size: small;
         max-width: 100%;
         padding: unset;
+    }
+    .about-tc-sct{
+        padding-bottom: 10em;
     }
 }
 
