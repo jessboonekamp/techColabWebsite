@@ -422,7 +422,6 @@ section ul li{
 }
 .center-vh{
     justify-content: center;
-    align-items: center;
 }
 .text-pane{
     line-height: 2.5rem;
@@ -436,7 +435,6 @@ section ul li{
 .text-pane .head{
     align-self: normal;
     margin-bottom: 1.5rem;
-    margin-left: 2rem;
 }
 .section{ 
     position: relative;
