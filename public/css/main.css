@@ -625,11 +625,10 @@ section ul li{
 .project-students{
     margin-top: auto;
     max-width: 100%;
-    overflow: auto;
+    overflow-y: hidden;
     align-items: center;
     gap: 1em;
     padding: 1em;
-    overflow: auto;
     position: relative;
     height: fit-content;
 }
@@ -1234,6 +1233,9 @@ a:hover{
     }
     .burger-show{
         top: 5.3rem;
+    }
+    .p-desc{
+        flex: 1 0 3rem;
     }
 }
 
