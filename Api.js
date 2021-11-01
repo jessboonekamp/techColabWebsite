@@ -836,6 +836,11 @@ app.all('/admin/about/:asType*?', isAuthorized, async (req, res, next) => {
 
 
                 if(req?.files?.Files) await AppFn.updateDbFileStore(5, await AppFn.uploadFiles(req, 'about', __dirname), 'about');
+
+                return res.send({
+                    Message: 'About updated!'
+                })
+
                 
             break;
 
