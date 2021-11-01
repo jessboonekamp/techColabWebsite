@@ -899,7 +899,7 @@ footer > div:first-child{ padding: 3rem;}
     box-shadow: 2px 3px 4px 2px #8594a0;
     /* padding: 0.5em; */
     position: relative;
-    height: 15rem;
+    height: 23rem;
     gap: 1em;
     border-radius: 6px;
     text-decoration: none;
@@ -1181,7 +1181,7 @@ a:hover{
         margin-bottom: 10rem;
     }
     .burger-show{
-        top: 4.7rem;
+        top: 4.7rem!important;
     }
     .floating-box{
         position: fixed;
@@ -1216,7 +1216,7 @@ a:hover{
     
 }
 
-@media screen and (max-width: 470px){
+@media screen and (min-width: 400px) and (max-width: 470px){
     .offer-section ul{
         font-size: small;
     }
