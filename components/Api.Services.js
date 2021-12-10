@@ -5,6 +5,7 @@ module.exports = function(mailConfig, decryptor){
     if(typeof decryptor !== 'function') throw new Error(`Invalid Decryptor. Must be a function.`);
 
     mailConfig.auth.pass = decryptor(mailConfig.auth.pass);
+    console.log(8, mailConfig)
 
     return {
 
