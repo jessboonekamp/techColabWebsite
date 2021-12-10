@@ -1,1 +1,29 @@
-
+{
+    "appName": "TechColab",
+    "port": 3001,
+    "database": {
+        "host": "us-cdbr-east-04.cleardb.com",
+        "user": "bb6f5e5bb1f574",
+        "password": "845d701e",
+        "database": "heroku_ab18759142c4659",
+        "multipleStatements": true
+    },
+    "adminUser": {
+        "userName": "admin",
+        "password": "$2b$10$P4LLI4uc4Gb5zU04looAyOUqLiExIpPDKgA2rRTDQAHZ17Eic67dG",
+        "role": "admin"
+    },
+    "apis": {
+        "maps":{
+            "key": ""
+        }
+    },
+    "mailSvc": {
+        "service": "gmail",
+        "auth": {
+            "user": "techcolabmailservice@gmail.com",
+            "pass": "74c0fc0443b8a45d0666d0b8a9d1fac3:bce4a4bd32a007fbee8728d70ec72d88=3ec84fbbb7bd5310ff593037c690d88777e1cf0728e85d45115b76afc35cfee1"
+        },
+        "targetMailBox": "jessboo98@hotmail.com"
+    }
+}
