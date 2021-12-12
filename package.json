@@ -16,7 +16,7 @@
     "jsdom": "^17.0.0",
     "moment": "^2.29.1",
     "mysql": "^2.18.1",
-    "nodemailer": "^6.6.5"
+    "nodemailer": "^6.7.2"
   },
   "devDependencies": {},
   "scripts": {
