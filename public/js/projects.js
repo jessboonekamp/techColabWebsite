@@ -52,8 +52,6 @@ window.addEventListener('load', async e => {
 
 })
 
-
-
 window.addEventListener('scroll', e => {
     $('.prof-card').addClass('hide')
 })
@@ -275,14 +273,14 @@ function expandTile(e, project){
             .on('mouseleave', e => {
                 console.log($(e.target), $(e.currentTarget), $(e.target).parents('.prof-card'))
                 
-                clearTimeout(clear);
-                if(!$(e.currentTarget).parents('.prof-card').length){
-                    clear = setTimeout(() => {
+                // clearTimeout(clear);
+                // if(!$(e.currentTarget).parents('.prof-card').length){
+                //     clear = setTimeout(() => {
 
-                        profCard.html('').fadeOut().addClass('hide')
+                //         profCard.html('').fadeOut().addClass('hide')
     
-                    }, 3000)
-                }
+                //     }, 3000)
+                // }
 
 
                 
@@ -298,7 +296,7 @@ function expandTile(e, project){
 
         $('.prof-card').on('mouseleave', e => {
   
-            clear = setTimeout(() => profCard.html('').fadeOut().addClass('hide'), 3000)
+            // clear = setTimeout(() => profCard.html('').fadeOut().addClass('hide'), 3000)
 
         })
 

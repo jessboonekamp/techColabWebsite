@@ -724,7 +724,8 @@ app.all("/admin/projects/:projectId*?", isAuthorized, async(req, res, next) => {
     
                 content = "Projects"
                 // Then map each project in array with its media.
-                projects = await Promise.all((await AppFn.searchEntity(null, 'project')).Data.map(async project => AppFn.getProjectProfile(project.id)));
+                let projects = await Promise.all((await AppFn.searchEntity(null, 'project')).Data.map(async project => AppFn.getProjectProfile(project.id)));
+                console.log(728, projects);
                 // projects = await AppFn.searchEntity(null, 'project')
                 resObj.Projects = projects;
                 console.log(resObj.Projects)
@@ -1263,7 +1264,7 @@ app.get('*', async (req, res, next) => {
 
 // })
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`)
 });

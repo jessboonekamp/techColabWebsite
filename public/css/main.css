@@ -27,6 +27,7 @@ main{
 }
 * {
     font-family: 'Poppins', sans-serif;
+    letter-spacing: 0.6px;
 }
 
 *:hover{ cursor: pointer; }
@@ -666,6 +667,7 @@ section ul li{
     letter-spacing: 1px;
 }
 .prof-card > .project-collaborator-desc{
+    overflow: auto;
     font-size: small;
     text-align: center;
     padding: 0 0.5em 0.5em 0.5em;
@@ -703,7 +705,6 @@ section ul li{
 .home-directions-box{
     text-align: center;
     margin-top: auto;
-    margin-bottom: 5em;
     display: flex;
     flex-direction: column;
     gap: 1em;
@@ -1174,12 +1175,6 @@ a:hover{
   }
 
 @media screen and (max-width: 400px){
-    .home-directions-box{
-        margin-bottom: 20rem;
-    }
-    .offer-box{
-        margin-bottom: 10rem;
-    }
     .burger-show{
         top: 4.7rem!important;
     }
@@ -1213,7 +1208,20 @@ a:hover{
         overflow: auto;
         height: 7em;
     }
-    
+    .offer-section{
+        display: none;
+    }
+    #freepik_stories-devices{
+        display: none;
+    }
+    footer{
+        font-size: small;
+        max-width: 100%;
+        padding: unset;
+    }
+    .offer-box{
+        margin-top: unset;
+    }
 }
 
 @media screen and (min-width: 400px) and (max-width: 470px){
@@ -1228,15 +1236,22 @@ a:hover{
         max-width: 100%;
         padding: unset;
     }
-    .about-tc-sct{
-        padding-bottom: 10em;
-    }
     .burger-show{
         top: 5.3rem;
     }
     .p-desc{
         flex: 1 0 3rem;
     }
+    .offer-section{
+        display: none;
+    }
+    #freepik_stories-devices{
+        display: none;
+    }
+    .offer-box{
+        margin-top: unset;
+    }
+
 }
 
 @media screen and (max-width: 650px){
@@ -1322,6 +1337,10 @@ a:hover{
 
 @media screen and (max-width: 800px){
 
+    .offer-box{
+        margin-top: 10rem;
+    }
+
     .about-section section.d-f{
         flex-direction: column;
         position: relative;
@@ -1338,10 +1357,6 @@ a:hover{
 
     .about-section section:first-child{
         height: 25rem;
-    }
-
-    .about-section section:first-child .home-directions-box{
-        padding-bottom: 14em;
     }
 
 
@@ -1397,6 +1412,9 @@ a:hover{
     }
     .box-content .tile-column{
         max-width: 50%;
+    }
+    .list-container-grp{
+        padding-left: 4rem;
     }
 }
   

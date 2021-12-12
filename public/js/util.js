@@ -1,3 +1,11 @@
+window.addEventListener('load', e => {
+    $('body').on('wheel', e => {
+        console.log('sss')
+        $('.tool-tip').addClass('hide');
+    })
+
+})
+
 export function bindFn(htmlDomTokenList, bindingFn, fnArgs, eventName){
     if(!htmlDomTokenList) return
 
