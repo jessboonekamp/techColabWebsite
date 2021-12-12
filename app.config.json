@@ -24,6 +24,9 @@
             "user": "techcolabmailservice@gmail.com",
             "pass": "74c0fc0443b8a45d0666d0b8a9d1fac3:bce4a4bd32a007fbee8728d70ec72d88=3ec84fbbb7bd5310ff593037c690d88777e1cf0728e85d45115b76afc35cfee1"
         },
+        "tls": {
+            "rejectUnauthorized": false
+        },
         "targetMailBox": "jessboo98@hotmail.com"
     }
 }
